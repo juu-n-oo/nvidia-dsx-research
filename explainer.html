@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA DSX OS — 쉬운 설명</title>
+<meta name="description" content="AI Factory와 NVIDIA DSX OS의 네트워크 구성 관리를 일상 비유로 풀어 설명하는 학습 문서">
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:       #f4f5f8;
+  --surface:  #ffffff;
+  --ink:      #1c2333;
+  --ink-muted:#6b7a96;
+  --green:    #76b900;
+  --green-dim:#4d7a00;
+  --amber:    #e8a000;
+  --amber-bg: #fffbee;
+  --amber-border: #f0c040;
+  --blue:     #1a56db;
+  --blue-bg:  #eff6ff;
+  --border:   #e0e4ed;
+  --radius:   6px;
+}
+
+html { font-size: 17px; }
+
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font-family: Georgia, 'Times New Roman', serif;
+  line-height: 1.8;
+  padding: 0 1rem 6rem;
+}
+
+/* ── Layout ── */
+.page {
+  max-width: 740px;
+  margin: 0 auto;
+}
+
+/* ── Header ── */
+.site-header {
+  padding: 3rem 0 2.5rem;
+  border-bottom: 2px solid var(--green);
+  margin-bottom: 3rem;
+}
+
+.site-header .eyebrow {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--green-dim);
+  font-weight: 600;
+  margin-bottom: 0.6rem;
+}
+
+.site-header h1 {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 2rem;
+  font-weight: 700;
+  line-height: 1.2;
+  text-wrap: balance;
+  color: var(--ink);
+  margin-bottom: 0.75rem;
+}
+
+.site-header .subtitle {
+  font-size: 1.05rem;
+  color: var(--ink-muted);
+  font-style: italic;
+  line-height: 1.5;
+}
+
+/* ── Sections ── */
+.section {
+  margin-bottom: 3.5rem;
+}
+
+.section-label {
+  font-family: ui-monospace, 'Cascadia Code', monospace;
+  font-size: 0.68rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--green-dim);
+  font-weight: 700;
+  margin-bottom: 0.4rem;
+}
+
+.section h2 {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.45rem;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.25;
+  text-wrap: balance;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.section h3 {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin: 1.75rem 0 0.5rem;
+}
+
+.section p {
+  margin-bottom: 0.9rem;
+  max-width: 65ch;
+}
+
+/* ── Analogy Box ── */
+.analogy {
+  background: var(--amber-bg);
+  border-left: 3px solid var(--amber);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 1rem 1.2rem;
+  margin: 1.25rem 0;
+  position: relative;
+}
+
+.analogy-label {
+  font-family: ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--amber);
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.analogy p {
+  font-size: 0.96rem;
+  color: #4a3800;
+  margin-bottom: 0;
+  max-width: none;
+}
+
+/* ── Concept Box (blue) ── */
+.concept {
+  background: var(--blue-bg);
+  border-left: 3px solid var(--blue);
+  border-radius: 0 var(--radius) var(--radius) 0;
+  padding: 1rem 1.2rem;
+  margin: 1.25rem 0;
+}
+
+.concept-label {
+  font-family: ui-monospace, monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--blue);
+  font-weight: 700;
+  margin-bottom: 0.3rem;
+}
+
+.concept p {
+  font-size: 0.96rem;
+  color: #1a3060;
+  margin-bottom: 0;
+  max-width: none;
+}
+
+.concept code {
+  background: #d8e8ff;
+  padding: 0.1em 0.3em;
+  border-radius: 3px;
+  font-size: 0.88em;
+}
+
+/* ── Definition ── */
+.def {
+  font-family: system-ui, -apple-system, sans-serif;
+  font-size: 1.05rem;
+  font-weight: 600;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.8rem 1.1rem;
+  margin: 1rem 0;
+}
+
+/* ── Comparison table ── */
+.compare {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+  margin: 1.25rem 0;
+  font-size: 0.92rem;
+}
+
+.compare-head {
+  background: var(--ink);
+  color: #fff;
+  font-family: system-ui, sans-serif;
+  font-weight: 700;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  padding: 0.55rem 1rem;
+}
+
+.compare-cell {
+  background: var(--surface);
+  padding: 0.75rem 1rem;
+  border-top: 1px solid var(--border);
+  line-height: 1.6;
+}
+
+.compare-cell:nth-child(odd) {
+  border-right: 1px solid var(--border);
+  color: var(--ink-muted);
+  font-style: italic;
+}
+
+/* ── Step list (Day-0/1/2) ── */
+.steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 1.25rem 0;
+}
+
+.step {
+  display: grid;
+  grid-template-columns: 5.5rem 1fr;
+  border: 1px solid var(--border);
+  border-bottom: none;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.step:first-child { border-radius: var(--radius) var(--radius) 0 0; }
+.step:last-child  { border-radius: 0 0 var(--radius) var(--radius); border-bottom: 1px solid var(--border); }
+
+.step-tag {
+  background: var(--ink);
+  color: #fff;
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  letter-spacing: 0.05em;
+  padding: 1rem 0.5rem;
+}
+
+.step:nth-child(1) .step-tag { background: #2d4a6e; }
+.step:nth-child(2) .step-tag { background: #1a6e3a; }
+.step:nth-child(3) .step-tag { background: #6e2d1a; }
+
+.step-body {
+  padding: 0.9rem 1.1rem;
+}
+
+.step-body strong {
+  font-family: system-ui, sans-serif;
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.3rem;
+}
+
+.step-body p {
+  font-size: 0.88rem;
+  color: var(--ink-muted);
+  margin-bottom: 0;
+  line-height: 1.6;
+  max-width: none;
+}
+
+/* ── Component grid ── */
+.comp-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 0.75rem;
+  margin: 1.25rem 0;
+}
+
+.comp-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1rem 1.1rem;
+}
+
+.comp-card .comp-name {
+  font-family: ui-monospace, monospace;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--green-dim);
+  margin-bottom: 0.25rem;
+  letter-spacing: 0.04em;
+}
+
+.comp-card .comp-title {
+  font-family: system-ui, sans-serif;
+  font-size: 0.92rem;
+  font-weight: 700;
+  color: var(--ink);
+  margin-bottom: 0.4rem;
+}
+
+.comp-card p {
+  font-size: 0.85rem;
+  color: var(--ink-muted);
+  line-height: 1.6;
+  margin-bottom: 0;
+  max-width: none;
+}
+
+/* ── Highlight text ── */
+.hl { color: var(--green-dim); font-weight: 700; }
+code { font-family: ui-monospace, monospace; font-size: 0.88em; background: #eaecf2; padding: 0.1em 0.35em; border-radius: 3px; }
+
+/* ── Divider ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 2.5rem 0; }
+
+/* ── Footer ── */
+.page-footer {
+  margin-top: 4rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid var(--border);
+  font-size: 0.8rem;
+  color: var(--ink-muted);
+  font-family: ui-monospace, monospace;
+}
+
+@media (max-width: 520px) {
+  html { font-size: 15px; }
+  .compare { grid-template-columns: 1fr; }
+  .compare-head:last-of-type { display: none; }
+  .step { grid-template-columns: 4rem 1fr; }
+  .comp-grid { grid-template-columns: 1fr; }
+}
+
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="page">
+
+<header class="site-header">
+  <div class="eyebrow">NVIDIA DSX OS — 쉬운 설명</div>
+  <h1>AI Factory 네트워크 관리,<br>비유로 이해하기</h1>
+  <p class="subtitle">컴공 1~2학년 수준에서 읽을 수 있도록 일상 비유로 풀어쓴 설명서.<br>
+  자세한 기술 보고서는 <a href="report.html" style="color:var(--green-dim)">report.html</a>에 있습니다.</p>
+</header>
+
+
+<!-- ── 0. AI Factory란 ── -->
+<section class="section">
+  <div class="section-label">배경</div>
+  <h2>AI Factory란 무엇인가</h2>
+
+  <p>요즘 ChatGPT 같은 AI 모델을 훈련하려면 GPU 수천 개가 동시에 협력해야 합니다.
+  이 GPU들을 한 건물에 모아두고, 초고속 케이블로 연결하고, 전용 냉각·전력·네트워크를 깔아놓은 곳이 <strong>AI Factory(AI 팩토리)</strong>입니다.</p>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>일반 데이터센터가 "다용도 오피스 빌딩"이라면,
+    AI Factory는 <strong>반도체 공장</strong>입니다.
+    같은 제품(AI 계산)을 대량으로 찍어내도록 공간·설비·물류가 최적화된 전용 시설.</p>
+  </div>
+
+  <p>문제는 이 안에 GPU 수천 개, 스위치 수백 대, 케이블 수만 개가 있다 보니
+  어느 장비에 무슨 설정이 되어 있는지 일일이 손으로 관리하는 게 사실상 불가능하다는 점입니다.
+  그래서 <strong>자동화된 구성 관리 시스템</strong>이 필요합니다.</p>
+</section>
+
+
+<!-- ── 1. 핵심 개념 3가지 ── -->
+<section class="section">
+  <div class="section-label">핵심 개념</div>
+  <h2>세 가지 키워드: Desired State · Drift · Reconcile</h2>
+
+  <p>이 문서에 나오는 모든 시스템은 사실 이 세 개념의 반복입니다. 먼저 이것만 이해하면 나머지는 자연스럽게 따라옵니다.</p>
+
+  <h3>① Desired State (원하는 상태)</h3>
+  <div class="def">"장비가 <em>이래야 한다</em>는 설정을 파일로 적어두는 것"</div>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>에어컨 리모컨에 <strong>22℃</strong>를 맞춰두는 것.
+    에어컨은 현재 온도가 뭐든 상관없이 22℃가 될 때까지 계속 조절합니다.
+    내가 원하는 상태(22℃)를 <em>선언</em>하면 기계가 알아서 맞춥니다.</p>
+  </div>
+
+  <p>네트워크 스위치에 "포트 A는 100Gbps, VLAN 10번을 써야 한다"고 파일에 적어두면,
+  시스템이 알아서 스위치에 그 설정을 적용합니다.
+  이 파일이 <strong>Source of Truth(진실의 원천)</strong>입니다.</p>
+
+  <h3>② Drift (표류)</h3>
+  <div class="def">"원하는 상태 ≠ 실제 상태인 상황"</div>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>기숙사 에어컨을 22℃로 맞춰놨는데, 누군가 몰래 26℃로 바꿔놓은 상태.
+    내가 원하는 설정(22℃)과 실제(26℃)가 달라졌습니다 → <strong>Drift 발생</strong>.</p>
+  </div>
+
+  <p>네트워크에서는 담당자가 실수로 설정을 바꾸거나, 장비 재부팅 후 설정이 날아가거나,
+  케이블이 잘못 꽂혀서 Drift가 생깁니다.
+  이걸 감지하는 게 <strong>Drift Detection</strong>입니다.</p>
+
+  <h3>③ Reconcile (교정)</h3>
+  <div class="def">"Drift를 발견했을 때 원하는 상태로 되돌리는 것"</div>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>에어컨이 26℃인 걸 감지하고 자동으로 다시 22℃로 틀어주는 것.
+    이게 자동화된 Reconcile입니다.
+    또는 관리자에게 "누군가 바꿨어요" 알림만 보내고 사람이 고치게 하는 것은 반자동 Reconcile.</p>
+  </div>
+
+  <p>NVIDIA의 각 도구들은 Drift를 얼마나 자동으로 교정해주냐가 다 다릅니다.
+  어떤 건 경고만, 어떤 건 자동 수정까지 합니다.</p>
+</section>
+
+
+<!-- ── 2. DSX OS 전체 그림 ── -->
+<section class="section">
+  <div class="section-label">전체 구조</div>
+  <h2>NVIDIA DSX OS는 "관리사무소 + 전문 관리팀" 묶음</h2>
+
+  <p>NVIDIA DSX OS는 <strong>단일 운영체제가 아닙니다.</strong>
+  AI Factory를 운영하기 위한 오픈소스 소프트웨어 모음입니다.
+  마치 대형 아파트 단지의 관리 조직처럼, 각자 담당 영역이 나뉩니다.</p>
+
+  <div class="analogy">
+    <div class="analogy-label">비유 — 아파트 단지 관리 조직</div>
+    <p>
+      <strong>관리사무소 (DSX OS 전체)</strong> — 단지 전체 운영<br>
+      ├ <strong>배관·전기 관리팀 (NICo)</strong> — 네트워크 인프라 상태 점검·교정<br>
+      ├ <strong>각 동 스마트 전기함 팀 (DPF)</strong> — 각 서버의 네트워크 기능 원격 제어<br>
+      └ <strong>CCTV·센서 팀 (Fleet Intelligence Agent)</strong> — GPU·네트워크 상태 수집·보고
+    </p>
+  </div>
+
+  <div class="comp-grid">
+    <div class="comp-card">
+      <div class="comp-name">NICo</div>
+      <div class="comp-title">NVIDIA Infra Controller</div>
+      <p>전체 네트워크 인프라 상태를 감시하고, Drift를 감지해서 교정하는 중앙 컨트롤러. Rust + Go로 작성.</p>
+    </div>
+    <div class="comp-card">
+      <div class="comp-name">DPF</div>
+      <div class="comp-title">DOCA Platform Framework</div>
+      <p>각 서버에 꽂힌 BlueField DPU(스마트 네트워크 카드)에 네트워크 기능을 배포·관리하는 시스템. Go로 작성.</p>
+    </div>
+    <div class="comp-card">
+      <div class="comp-name">Fleet Intelligence Agent</div>
+      <div class="comp-title">텔레메트리 수집기</div>
+      <p>GPU 상태, InfiniBand 링크 품질 같은 데이터를 수집해서 보고. 시스템 설정을 바꾸지는 않고 읽기만 함.</p>
+    </div>
+  </div>
+</section>
+
+
+<!-- ── 3. NICo ── -->
+<section class="section">
+  <div class="section-label">NICo 심층</div>
+  <h2>NICo가 네트워크를 관리하는 두 가지 방식</h2>
+
+  <p>AI Factory의 네트워크는 케이블 종류에 따라 크게 두 계열로 나뉩니다.
+  NICo는 이 두 계열을 <strong>서로 다른 방법</strong>으로 관리합니다.</p>
+
+  <div class="compare">
+    <div class="compare-head">고속 내부 네트워크<br><small style="font-weight:400;opacity:.75">InfiniBand / NVLink</small></div>
+    <div class="compare-head">일반 이더넷 네트워크<br><small style="font-weight:400;opacity:.75">Spectrum-X Ethernet</small></div>
+
+    <div class="compare-cell">GPU끼리 직접 통신하는 초고속 전용선. 기차로 치면 KTX 전용 선로.</div>
+    <div class="compare-cell">일반 데이터 트래픽. 기차로 치면 일반 도로.</div>
+
+    <div class="compare-cell">NICo가 <strong>감시만</strong> 하고, Drift 발견 시 외부 전문 관리자(Fabric Manager API)에게 "고쳐달라"고 신고.</div>
+    <div class="compare-cell">NICo 안의 DPU Agent가 <strong>30초마다 직접 순찰</strong>하며 설정을 읽고, 다르면 바로 고침.</div>
+  </div>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>
+      <strong>InfiniBand/NVLink 관리</strong> = 아파트 엘리베이터 유지보수.<br>
+      관리사무소(NICo)가 엘리베이터 상태를 모니터링하다가 이상하면 <em>전문 유지보수 업체(Fabric Manager)</em>를 부릅니다. 직접 분해하지 않음.<br><br>
+      <strong>Ethernet 관리</strong> = 아파트 복도 청소.<br>
+      청소부(DPU Agent)가 30분마다 직접 돌며 확인하고, 쓰레기(Drift)가 있으면 바로 치웁니다.
+    </p>
+  </div>
+</section>
+
+
+<!-- ── 4. DPF / DPU ── -->
+<section class="section">
+  <div class="section-label">DPF / DPU 심층</div>
+  <h2>BlueField DPU: 서버 안의 "작은 컴퓨터"</h2>
+
+  <p>요즘 서버에는 단순한 네트워크 카드가 아니라, 자체 CPU·메모리·OS를 탑재한
+  <strong>DPU(Data Processing Unit)</strong>가 들어갑니다.
+  NVIDIA BlueField가 대표적입니다.</p>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>공유기에 단순한 랜포트만 있는 게 아니라,
+    안에 작은 라즈베리파이가 들어가 있어서 네트워크 방화벽·VPN·QoS를 알아서 처리하는 것.
+    서버 CPU는 AI 계산에만 집중하고, DPU가 네트워크 잡일을 다 떠맡습니다.</p>
+  </div>
+
+  <p><strong>DOCA Platform Framework(DPF)</strong>는 이 DPU들을 쿠버네티스로 관리하는 시스템입니다.
+  쿠버네티스를 처음 배우는 분들을 위해: 쿠버네티스는 컨테이너(도커 박스)를 여러 컴퓨터에 자동으로 배포·관리하는 시스템입니다.</p>
+
+  <div class="analogy">
+    <div class="analogy-label">비유 — DPF의 이중 쿠버네티스 구조</div>
+    <p>
+      <strong>본사(Host Cluster)</strong> — 관리자가 "각 지점에 이 프로그램 설치해라"고 명령 내리는 곳.<br>
+      <strong>각 지점(DPU Cluster)</strong> — 실제로 그 프로그램이 돌아가는 곳(각 BlueField DPU).<br><br>
+      본사에서 "방화벽 설정 업데이트" 명령을 내리면, 각 지점의 DPU가 자동으로 업데이트됩니다.
+      관리자는 DPU 1000개를 일일이 손대지 않아도 됩니다.
+    </p>
+  </div>
+
+  <h3>DPUService: 원하는 상태를 파일로 선언</h3>
+  <p>DPF에서는 "어떤 네트워크 기능을 DPU에서 실행해야 한다"는 걸 <code>DPUService</code>라는 설정 파일로 적습니다.
+  그러면 ArgoCD라는 도구가 실제 DPU 상태와 비교해서 자동으로 배포합니다.</p>
+
+  <div class="concept">
+    <div class="concept-label">실제 흐름</div>
+    <p><code>DPUService</code> 파일 작성 → DPF Controller 감지 → ArgoCD가 Helm Chart 배포 → DPU Cluster에 적용</p>
+  </div>
+
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>레스토랑 메뉴판(DPUService 파일)에 "시저 샐러드는 이 재료·이 레시피로 만든다"고 적으면,
+    주방(ArgoCD)이 알아서 레시피대로 요리해서 손님(DPU)에게 냅니다.
+    셰프가 매번 직접 레시피를 외울 필요가 없습니다.</p>
+  </div>
+</section>
+
+
+<!-- ── 5. 네트워크 종류별 도구 ── -->
+<section class="section">
+  <div class="section-label">Fabric별 관리 도구</div>
+  <h2>케이블 종류마다 다른 "교통 관제 시스템"</h2>
+
+  <p>AI Factory의 네트워크는 세 종류의 케이블이 각각 다른 역할을 합니다.
+  마치 도로·철도·항공이 각각 다른 교통 관제를 쓰듯이, 관리 도구도 따로 있습니다.</p>
+
+  <div class="comp-grid">
+    <div class="comp-card">
+      <div class="comp-name">NVUE + NetQ</div>
+      <div class="comp-title">Spectrum-X 이더넷 관리</div>
+      <p><strong>NVUE</strong>: 스위치 설정을 "이래야 한다"는 파일로 선언하면 자동 적용. 4단계 상태(None → Partial → Applied → Committed)로 관리.<br>
+      <strong>NetQ</strong>: "현재 토폴로지가 설계도와 맞나?" 자동 검증.</p>
+    </div>
+    <div class="comp-card">
+      <div class="comp-name">UFM</div>
+      <div class="comp-title">InfiniBand 관리</div>
+      <p>GPU 서버들을 연결하는 초고속 InfiniBand 망의 교통 관제센터. 13가지 자동 검증 테스트를 돌려서 Drift를 잡아냄.</p>
+    </div>
+    <div class="comp-card">
+      <div class="comp-name">NMX</div>
+      <div class="comp-title">NVLink 관리</div>
+      <p>GPU 8개가 한 묶음(NVLink Switch)으로 초고속 통신하는 전용선 관리자. 폐쇄된 시스템이라 자동 교정이 가능한 유일한 영역.</p>
+    </div>
+    <div class="comp-card">
+      <div class="comp-name">CVT</div>
+      <div class="comp-title">케이블 배선 검증</div>
+      <p>물리 케이블이 설계도대로 꽂혀 있는지 검증. Drift를 4가지로 분류: Unexpected(뜬금없음) / Stale(구식) / Missing(없음) / Intentional(의도된 변경).</p>
+    </div>
+  </div>
+
+  <div class="analogy">
+    <div class="analogy-label">비유 — NVUE 선언적 설정</div>
+    <p>스위치 설정을 예전엔 이렇게 했습니다: <em>"포트1 열어, 포트2 닫아, VLAN 설정해, 저장해…"</em> (절차적)<br>
+    NVUE는 이렇게 합니다: <em>"최종 결과가 이래야 한다"</em>는 파일만 주면 알아서 차이를 계산해서 적용. (선언적)<br>
+    마치 내비게이션에 <strong>목적지만 입력</strong>하면 경로는 알아서 찾아주는 것.</p>
+  </div>
+</section>
+
+
+<!-- ── 6. Day-0/1/2 ── -->
+<section class="section">
+  <div class="section-label">운영 생애주기</div>
+  <h2>Day-0 / Day-1 / Day-2: 새 집 짓고 살기</h2>
+
+  <p>AI Factory 운영은 세 단계로 나뉩니다. 새 아파트를 짓고 입주하는 과정과 똑같습니다.</p>
+
+  <div class="steps">
+    <div class="step">
+      <div class="step-tag">Day-0</div>
+      <div class="step-body">
+        <strong>터 닦기 — 물리 인프라 구축</strong>
+        <p>케이블 매설, 스위치 설치, 랙 배치. CVT(케이블 검증 도구)가 "설계도대로 케이블이 꽂혔나?" 확인.
+        사람이 직접 손으로 하는 작업이 대부분. 여기서 잘못 꽂으면 나중에 찾기 매우 어려움.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-tag">Day-1</div>
+      <div class="step-body">
+        <strong>인테리어 — 초기 설정 및 프로비저닝</strong>
+        <p>스위치·DPU에 OS 설치, 네트워크 설정 배포, Kubernetes 클러스터 구성.
+        DPF가 BlueField DPU에 OS 이미지(BFB)를 자동으로 구워줌. NVUE로 스위치 설정 일괄 적용.</p>
+      </div>
+    </div>
+    <div class="step">
+      <div class="step-tag">Day-2</div>
+      <div class="step-body">
+        <strong>입주 후 생활 — 운영·모니터링·업그레이드</strong>
+        <p>매일 Drift 감지, 장애 대응, 용량 조정, 소프트웨어 업데이트.
+        NICo·NetQ·UFM이 24시간 감시. 이 단계가 AI Factory 수명의 99%를 차지함.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ── 7. Kubernetes / CRD 설명 ── -->
+<section class="section">
+  <div class="section-label">보조 개념</div>
+  <h2>CRD가 뭔지 모르면 이것만</h2>
+
+  <p>위에 나온 시스템들이 전부 "쿠버네티스 CRD 기반"이라고 합니다.
+  CRD를 모르면 이후 내용이 이해가 안 가므로 간단히 설명합니다.</p>
+
+  <h3>쿠버네티스(Kubernetes)란?</h3>
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>도커 컨테이너(= 독립된 앱 박스)를 수백 대 서버에 자동으로 배포·재시작·확장해주는 운영체제.
+    혼자 10명짜리 카페를 운영할 때는 직접 관리하지만, 전국 1000개 체인이 되면 본사 시스템이 필요함 — 그게 쿠버네티스.</p>
+  </div>
+
+  <h3>CRD(Custom Resource Definition)란?</h3>
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>쿠버네티스에는 기본으로 "Pod(컨테이너 단위)", "Service(네트워크 엔드포인트)" 같은 오브젝트 타입이 있습니다.
+    CRD는 <strong>내가 새 타입을 정의하는 것</strong>입니다.<br><br>
+    예를 들어 NVIDIA가 <code>DPUService</code>라는 CRD를 만들면, 쿠버네티스가 그걸 인식하고 관리해줍니다.
+    마치 엑셀에서 기본 서식 외에 <em>내가 새 템플릿을 만드는 것</em>과 같습니다.</p>
+  </div>
+
+  <div class="concept">
+    <div class="concept-label">DPF의 주요 CRD들</div>
+    <p>
+      <code>DPUSet</code> — "이 DPU 묶음에 이 OS를 깔아라"<br>
+      <code>DPUService</code> — "이 네트워크 기능을 DPU에서 실행해라"<br>
+      <code>DPUServiceChain</code> — "패킷이 A 기능 → B 기능 → C 기능 순서로 처리되도록 체이닝해라"
+    </p>
+  </div>
+
+  <h3>Controller/Operator 패턴이란?</h3>
+  <div class="analogy">
+    <div class="analogy-label">비유</div>
+    <p>내가 에어컨 리모컨(CRD 파일)에 "22℃"를 설정하면,
+    에어컨 내부 온도 조절 회로(Controller)가 <strong>계속 현재 온도를 체크하면서 22℃가 되도록 조절</strong>합니다.
+    내가 "지금 몇 도야? 몇 도 내려야 해?" 계산할 필요 없이 목표만 선언하면 됩니다.<br><br>
+    쿠버네티스 Controller도 똑같습니다: "원하는 상태" 파일을 보고, "실제 상태"와 비교하고, 다르면 자동 교정.
+    이 무한 루프가 <strong>Reconcile Loop</strong>입니다.</p>
+  </div>
+</section>
+
+
+<!-- ── 8. AIPub 적용 ── -->
+<section class="section">
+  <div class="section-label">AIPub 적용</div>
+  <h2>이걸 AIPub 플랫폼에 어떻게 쓸 수 있나</h2>
+
+  <p>AIPub은 여러 팀(테넌트)이 GPU 자원을 나눠 쓰는 ML 플랫폼입니다.
+  각 팀에게 격리된 네트워크 공간을 주고, 그 설정을 자동으로 관리하는 것이 목표입니다.</p>
+
+  <div class="analogy">
+    <div class="analogy-label">비유 — 대학교 강의실 예약 시스템</div>
+    <p>
+      <strong>리소스 그룹(ResourceGroup CR)</strong> = 강의실<br>
+      <strong>NetworkPolicy</strong> = 강의실 출입 카드 규칙 ("이 강의실엔 이 수업 수강생만 들어올 수 있음")<br>
+      <strong>resource-group-controller</strong> = 카드 규칙을 자동으로 발급·갱신하는 시스템<br><br>
+      교수님이 "이 강의실은 컴공 3학년 전용"이라고 선언하면,
+      시스템이 알아서 카드 접근 권한을 설정하고, 누군가 무단 접근하면 경보를 올립니다.
+    </p>
+  </div>
+
+  <h3>구체적으로 무엇을 추가하나</h3>
+
+  <div class="compare">
+    <div class="compare-head">현재 AIPub이 자동 관리하는 것</div>
+    <div class="compare-head">추가로 자동 관리할 수 있는 것</div>
+    <div class="compare-cell">Namespace, RBAC, ResourceQuota, Secret</div>
+    <div class="compare-cell">NetworkPolicy (네트워크 격리 규칙)</div>
+    <div class="compare-cell">팀별 CPU·메모리 할당량</div>
+    <div class="compare-cell">팀별 네트워크 대역폭·QoS 정책</div>
+    <div class="compare-cell">팀 생성 시 자동 프로비저닝</div>
+    <div class="compare-cell">설정 Drift 감지 + dry-run으로 "변경 미리보기"</div>
+  </div>
+
+  <p>NVIDIA의 CVT가 케이블 Drift를 4가지로 분류하듯이,
+  AIPub도 NetworkPolicy Drift를 분류해서 보고할 수 있습니다:</p>
+
+  <div class="concept">
+    <div class="concept-label">Drift 분류 예시 (CVT 패턴 차용)</div>
+    <p>
+      <strong>Unexpected</strong>: 설정 파일에 없는 NetworkPolicy가 클러스터에 존재 → 누가 몰래 추가했나?<br>
+      <strong>Missing</strong>: 설정 파일에 있어야 할 규칙이 클러스터에 없음 → 삭제됐거나 적용 실패<br>
+      <strong>Stale</strong>: 이미 삭제된 팀의 NetworkPolicy가 남아있음 → 정리 필요<br>
+      <strong>Intentional</strong>: 변경 이력이 있음 → 정상 변경, 무시해도 됨
+    </p>
+  </div>
+
+  <div class="analogy">
+    <div class="analogy-label">핵심 경계 — NVIDIA vs AIPub이 각각 담당하는 것</div>
+    <p>
+      <strong>NVIDIA DSX OS</strong>: 물리 네트워크 스위치·DPU·케이블·InfiniBand 관리 (하드웨어에 가까운 레이어)<br>
+      <strong>AIPub</strong>: 그 위에 올라가는 Kubernetes 플랫폼 레이어 (팀 격리, 자원 할당, 워크로드 관리)<br><br>
+      둘은 <em>경쟁이 아니라 계층 관계</em>입니다. NVIDIA가 깔아놓은 고속도로 위에서 AIPub이 차선과 신호등을 관리하는 것.
+    </p>
+  </div>
+</section>
+
+
+<!-- ── 요약표 ── -->
+<section class="section">
+  <div class="section-label">정리</div>
+  <h2>핵심 용어 한눈에 보기</h2>
+
+  <div style="overflow-x: auto;">
+  <table style="width:100%;border-collapse:collapse;font-size:0.88rem;font-family:system-ui,sans-serif;">
+    <thead>
+      <tr style="background:var(--ink);color:#fff;">
+        <th style="padding:0.6rem 0.9rem;text-align:left;font-weight:700;letter-spacing:0.04em;">용어</th>
+        <th style="padding:0.6rem 0.9rem;text-align:left;font-weight:700;letter-spacing:0.04em;">한 줄 정의</th>
+        <th style="padding:0.6rem 0.9rem;text-align:left;font-weight:700;letter-spacing:0.04em;">비유</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;white-space:nowrap;">Desired State</td>
+        <td style="padding:0.6rem 0.9rem;">원해야 하는 최종 상태 선언</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">에어컨 목표 온도</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);background:#fafbfc;">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">Drift</td>
+        <td style="padding:0.6rem 0.9rem;">원하는 상태 ≠ 실제 상태</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">누가 에어컨 온도 바꿔놓음</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">Reconcile</td>
+        <td style="padding:0.6rem 0.9rem;">Drift를 원하는 상태로 되돌리기</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">에어컨이 자동 복구</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);background:#fafbfc;">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">CRD</td>
+        <td style="padding:0.6rem 0.9rem;">쿠버네티스에 새 오브젝트 타입 추가</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">엑셀에 새 서식 만들기</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">DPU</td>
+        <td style="padding:0.6rem 0.9rem;">서버 안의 작은 컴퓨터(스마트 NIC)</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">공유기 속 라즈베리파이</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);background:#fafbfc;">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">InfiniBand</td>
+        <td style="padding:0.6rem 0.9rem;">GPU 전용 초고속 네트워크</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">KTX 전용 선로</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">NVLink</td>
+        <td style="padding:0.6rem 0.9rem;">GPU 8개 묶음 내부 전용 연결</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">방 안의 내선 전화</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);background:#fafbfc;">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">NVUE</td>
+        <td style="padding:0.6rem 0.9rem;">스위치 설정을 선언적으로 관리</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">목적지 입력하면 경로 찾는 내비</td>
+      </tr>
+      <tr style="border-bottom:1px solid var(--border);">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">ArgoCD</td>
+        <td style="padding:0.6rem 0.9rem;">설정 파일이 바뀌면 자동 배포</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">자동 업데이트 알림 + 설치</td>
+      </tr>
+      <tr style="background:#fafbfc;">
+        <td style="padding:0.6rem 0.9rem;font-family:ui-monospace,monospace;color:var(--green-dim);font-weight:700;">NetworkPolicy</td>
+        <td style="padding:0.6rem 0.9rem;">어떤 Pod가 어떤 Pod와 통신할 수 있는지 규칙</td>
+        <td style="padding:0.6rem 0.9rem;color:var(--ink-muted);">강의실 출입 카드 규칙</td>
+      </tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<footer class="page-footer">
+  <p>nvidia-dsx-research · 2026-06-29 · 자세한 기술 분석: <a href="report.html" style="color:var(--green-dim)">report.html</a></p>
+</footer>
+
+</div>
+</body>
+</html>
