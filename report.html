@@ -1,0 +1,387 @@
+<title>NVIDIA DSX 구성 관리 리서치 · AIPub 적용 브리핑</title>
+<meta name="description" content="NVIDIA DSX/DSX OS의 네트워크·구성 관리 체계(NMX/UFM/NVUE/NetQ/CVT)와 AIPub(k8s ML 플랫폼) 적용안, 그리고 이해를 위한 선수 배경지식.">
+<style>
+  :root{
+    --ground:#f7f8fb; --panel:#ffffff; --ink:#15181f; --muted:#5b6573;
+    --faint:#8b93a0; --line:#e4e8ed; --line-strong:#d2d8e0;
+    --accent:#13796b; --accent-soft:#e3f1ee; --accent-ink:#0c5249;
+    --good:#1f7a44; --good-soft:#e6f3ea; --bad:#b23b3b; --bad-soft:#f8e8e8;
+    --warn:#9a6b16; --warn-soft:#f6eeda;
+    --serif:Charter,"Iowan Old Style","Source Serif Pro",Georgia,Cambria,serif;
+    --sans:system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",sans-serif;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html{-webkit-text-size-adjust:100%}
+  body{
+    margin:0;background:var(--ground);color:var(--ink);
+    font-family:var(--sans);font-size:16px;line-height:1.65;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 24px 96px}
+  .reading{max-width:70ch}
+
+  /* ---- masthead ---- */
+  header.top{padding:64px 0 36px;border-bottom:1px solid var(--line-strong)}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent-ink);margin:0 0 18px}
+  h1{font-family:var(--serif);font-weight:600;font-size:clamp(30px,4.4vw,46px);
+    line-height:1.1;letter-spacing:-.01em;margin:0 0 18px;text-wrap:balance}
+  .standfirst{font-family:var(--serif);font-size:clamp(17px,2.1vw,20px);
+    line-height:1.55;color:#33404e;margin:0;max-width:62ch}
+  .meta-row{display:flex;flex-wrap:wrap;gap:10px 18px;margin-top:26px;
+    font-family:var(--mono);font-size:12.5px;color:var(--muted)}
+  .meta-row span{display:inline-flex;align-items:center;gap:7px}
+  .dot{width:6px;height:6px;border-radius:50%;background:var(--accent)}
+
+  /* ---- table of contents ---- */
+  nav.toc{margin:34px 0 8px;padding:22px 24px;background:var(--panel);
+    border:1px solid var(--line);border-radius:10px}
+  nav.toc p{margin:0 0 14px;font-family:var(--mono);font-size:11.5px;
+    letter-spacing:.13em;text-transform:uppercase;color:var(--faint)}
+  nav.toc ol{margin:0;padding:0;list-style:none;counter-reset:toc;
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:4px 28px}
+  nav.toc li{counter-increment:toc}
+  nav.toc a{display:flex;gap:12px;align-items:baseline;padding:7px 0;
+    color:var(--ink);text-decoration:none;border-bottom:1px solid transparent}
+  nav.toc a::before{content:counter(toc,decimal-leading-zero);
+    font-family:var(--mono);font-size:12px;color:var(--accent);flex:none}
+  nav.toc a:hover{color:var(--accent-ink)}
+  nav.toc a:hover span{text-decoration:underline;text-underline-offset:3px}
+
+  /* ---- sections ---- */
+  section{padding-top:56px}
+  h2{font-family:var(--serif);font-weight:600;font-size:27px;letter-spacing:-.01em;
+    line-height:1.2;margin:0 0 6px;text-wrap:balance;
+    padding-top:14px;scroll-margin-top:20px}
+  .kicker{font-family:var(--mono);font-size:12px;letter-spacing:.12em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 20px}
+  h3{font-family:var(--sans);font-weight:680;font-size:17.5px;
+    margin:34px 0 8px;letter-spacing:-.005em}
+  p{margin:0 0 16px}
+  .reading p,.reading li{color:#26303b}
+  strong{font-weight:660;color:var(--ink)}
+  a.inline{color:var(--accent-ink);text-decoration:underline;text-underline-offset:2px;
+    text-decoration-thickness:1px;text-decoration-color:#9ec9c1}
+  a.inline:hover{text-decoration-color:var(--accent)}
+  ul.clean{margin:0 0 18px;padding-left:0;list-style:none}
+  ul.clean li{position:relative;padding-left:20px;margin:0 0 9px}
+  ul.clean li::before{content:"";position:absolute;left:2px;top:11px;
+    width:6px;height:6px;border-radius:1px;background:var(--accent);opacity:.65}
+  code{font-family:var(--mono);font-size:.86em;background:#eef1f5;
+    padding:.12em .4em;border-radius:4px;color:#2a3340}
+
+  /* ---- callouts ---- */
+  .callout{border:1px solid var(--line);border-left-width:3px;border-radius:8px;
+    padding:18px 20px;margin:24px 0;background:var(--panel)}
+  .callout .lbl{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;
+    text-transform:uppercase;margin:0 0 8px;font-weight:600}
+  .callout p:last-child{margin-bottom:0}
+  .callout.fix{border-left-color:var(--bad);background:var(--bad-soft)}
+  .callout.fix .lbl{color:var(--bad)}
+  .callout.note{border-left-color:var(--warn);background:var(--warn-soft)}
+  .callout.note .lbl{color:var(--warn)}
+  .callout.key{border-left-color:var(--accent);background:var(--accent-soft)}
+  .callout.key .lbl{color:var(--accent-ink)}
+
+  /* ---- tables ---- */
+  .tablewrap{overflow-x:auto;margin:24px 0;border:1px solid var(--line);
+    border-radius:10px;background:var(--panel)}
+  table{border-collapse:collapse;width:100%;min-width:560px;font-size:14.5px}
+  th,td{text-align:left;padding:13px 16px;vertical-align:top;
+    border-bottom:1px solid var(--line)}
+  thead th{font-family:var(--mono);font-size:11.5px;letter-spacing:.06em;
+    text-transform:uppercase;color:var(--muted);font-weight:600;
+    background:#f0f3f7;border-bottom:1px solid var(--line-strong)}
+  tbody tr:last-child td{border-bottom:none}
+  tbody tr:hover{background:#f8fafc}
+  td strong{color:var(--accent-ink)}
+  td code{font-size:.82em}
+
+  /* ---- chips ---- */
+  .chip{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);
+    font-size:11.5px;font-weight:600;padding:3px 9px;border-radius:20px;
+    letter-spacing:.02em;white-space:nowrap}
+  .chip.good{background:var(--good-soft);color:var(--good)}
+  .chip.bad{background:var(--bad-soft);color:var(--bad)}
+  .chip.neu{background:#eceff3;color:var(--muted)}
+
+  /* ---- concept cards (background) ---- */
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(248px,1fr));
+    gap:14px;margin:24px 0}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+    padding:18px 18px 16px;display:flex;flex-direction:column}
+  .card .tag{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;
+    text-transform:uppercase;color:var(--accent);margin:0 0 9px}
+  .card h4{font-family:var(--sans);font-size:15.5px;font-weight:680;margin:0 0 7px;
+    letter-spacing:-.005em}
+  .card p{font-size:13.7px;line-height:1.55;color:#39434f;margin:0}
+  .card p + p{margin-top:8px}
+  .card .why{margin-top:auto;padding-top:11px;font-size:12.6px;color:var(--accent-ink)}
+  .card .why b{font-family:var(--mono);font-size:10px;letter-spacing:.08em;
+    text-transform:uppercase;display:block;color:var(--faint);margin-bottom:2px;font-weight:600}
+
+  /* ---- layered loop diagram ---- */
+  .loop{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:22px 0;
+    border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+  .loop .step{flex:1 1 150px;padding:16px 18px;border-right:1px solid var(--line)}
+  .loop .step:last-child{border-right:none}
+  .loop .step .n{font-family:var(--mono);font-size:11px;color:var(--accent);
+    letter-spacing:.1em}
+  .loop .step h5{margin:6px 0 4px;font-size:14.5px;font-weight:680}
+  .loop .step p{margin:0;font-size:12.8px;color:var(--muted);line-height:1.5}
+
+  /* ---- footer ---- */
+  footer{margin-top:72px;padding-top:28px;border-top:1px solid var(--line-strong);
+    font-size:13.5px;color:var(--muted)}
+  footer a{color:var(--accent-ink)}
+  footer .src{font-family:var(--mono);font-size:12px;line-height:1.9;
+    word-break:break-word}
+
+  .divider{height:1px;background:var(--line);border:none;margin:0}
+  @media (max-width:560px){
+    .wrap{padding:0 18px 72px}
+    header.top{padding:44px 0 28px}
+  }
+</style>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">내부 리서치 브리핑 · juu-n-oo/nvidia-dsx-research</p>
+    <h1>NVIDIA DSX의 구성 관리 패턴과 AIPub 적용</h1>
+    <p class="standfirst">NVIDIA가 AI Factory 물리 인프라에서 구현한 “기준 정보 → drift 감지 → reconcile” 모델을 해부하고, 그 운영 패턴을 쿠버네티스 기반 ML 플랫폼 AIPub으로 어떻게 끌어올지 정리한다. 더불어 이 주제를 읽기 위한 선수 배경지식을 함께 싣는다.</p>
+    <div class="meta-row">
+      <span><i class="dot"></i>조사 시점 2026-06</span>
+      <span><i class="dot"></i>deep-research 하네스 · 21 소스 / 23 confirmed · 2 refuted</span>
+      <span><i class="dot"></i>적용안은 분석가 합성(medium)</span>
+    </div>
+  </header>
+
+  <nav class="toc" aria-label="목차">
+    <p>목차</p>
+    <ol>
+      <li><a href="#tldr"><span>핵심 결론</span></a></li>
+      <li><a href="#mvcm"><span>정정: “MVCM”의 실체</span></a></li>
+      <li><a href="#dsx"><span>DSX란 무엇인가</span></a></li>
+      <li><a href="#cm"><span>구성 관리 5종과 패턴</span></a></li>
+      <li><a href="#aipub"><span>AIPub 적용</span></a></li>
+      <li><a href="#bg"><span>선수 배경지식</span></a></li>
+      <li><a href="#verify"><span>출처와 검증</span></a></li>
+    </ol>
+  </nav>
+
+  <!-- 1 -->
+  <section id="tldr" class="reading">
+    <p class="kicker">01 — 요약</p>
+    <h2>핵심 결론</h2>
+    <p>세 문장으로 줄이면 이렇다.</p>
+    <ul class="clean">
+      <li><strong>DSX는 단일 OS가 아니다.</strong> AI Factory를 설계·시뮬레이션·구축·운영하는 풀스택 프레임워크이고, <code>DSX OS</code>는 그중 운영 담당 오픈소스 모듈이다. 전부 <strong>물리/인프라 레이어</strong>로, AIPub이 위치한 ML 플랫폼 레이어보다 아래다.</li>
+      <li><strong>NVIDIA의 구성 관리 도구는 “선언적 기준정보 + diff 기반 drift 감지”를 일관되게 구현한다.</strong> 다만 대부분은 <em>감지까지</em>이고, 자동 교정(reconcile) 루프는 NMX-M→NMX-C와 일부 클라우드 사업자(Oracle OCI) 구현에서만 확인된다.</li>
+      <li><strong>이 패턴은 사실 쿠버네티스 오퍼레이터의 네이티브 모델이다.</strong> AIPub은 이미 <code>resource-group-controller</code>로 reconcile 루프를 갖고 있으므로, NVIDIA의 fabric 툴을 재구현할 게 아니라 그들이 검증한 <strong>운영 UX 패턴</strong>을 끌어오면 된다.</li>
+    </ul>
+  </section>
+
+  <!-- 2 -->
+  <section id="mvcm" class="reading">
+    <p class="kicker">02 — 가장 먼저 바로잡을 것</p>
+    <h2>“NVIDIA Config Manager (MVCM)”의 실체</h2>
+    <div class="callout fix">
+      <p class="lbl">정정</p>
+      <p>리서치 출발점의 가설 명칭 <strong>“NVIDIA Config Manager (MVCM)”는 실제 NVIDIA 제품명으로 확인되지 않았다.</strong> 다중 소스 검증 결과 그런 단일 제품은 존재하지 않는다.</p>
+    </div>
+    <p>실제 fabric/구성 관리 주체는 <strong>fabric 종류별로 분리된 5개</strong>다. 설계 문서·티켓에는 반드시 아래 실명을 쓰고, 가상의 “MVCM”에 의존하지 않는다.</p>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>영역</th><th>실제 도구</th><th>역할</th></tr></thead>
+        <tbody>
+          <tr><td>NVLink fabric (GB200 등)</td><td><strong>NMX</strong> (NMX-C/T/M/Oasis)</td><td>SDN 컨트롤 플레인 + 텔레메트리 + ML 분석 + 데이터레이크</td></tr>
+          <tr><td>InfiniBand fabric</td><td><strong>UFM</strong></td><td>프로비저닝·모니터링·검증(13 validation tests)</td></tr>
+          <tr><td>Ethernet (Spectrum-X/Cumulus)</td><td><strong>NVUE + NetQ</strong></td><td>선언적 config 모델 + 운영/검증 툴셋</td></tr>
+          <tr><td>물리 케이블링</td><td><strong>UFM CVT</strong></td><td>토폴로지 파일 기준 배선 drift 감지</td></tr>
+          <tr><td>배포 전 검증</td><td><strong>Omniverse DSX (Sim)</strong></td><td>디지털 트윈으로 변경 사전 시뮬레이션</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <!-- 3 -->
+  <section id="dsx" class="reading">
+    <p class="kicker">03 — 대상 파악</p>
+    <h2>DSX란 무엇인가</h2>
+    <p><strong>DSX는 단일 제품도 OS도 아닌 풀스택 프레임워크/포트폴리오</strong>다. 칩·시스템·네트워크(Spectrum-X/InfiniBand/NVLink)·스토리지·전력·시설·파트너 기술까지 “AI Factory를 어떻게 짓고 최적화하는가”를 정의한다(2026-06 발표). 구성요소는 참조 설계(DSX Reference Design), 디지털 트윈(Omniverse DSX Sim), 운영 레이어(DSX OS), 전력·인프라 계열(MaxLPS/Flex) 등으로 나뉜다.</p>
+    <h3>DSX OS</h3>
+    <p>DSX의 <strong>운영 담당 오픈소스 모듈 소프트웨어</strong>다. lifecycle management, intelligent scheduling, runtime consistency, health automation, resiliency, multi-tenant operations를 제공한다고 명시한다. 일부는 실제 공개 레포(<code>NVIDIA/infra-controller-core</code>, <code>NVIDIA/doca-platform</code> 등)로 릴리스됐는데, 이것이 마케팅이 아닌 가장 강한 신호다.</p>
+    <div class="callout key">
+      <p class="lbl">레이어 경계 — 이 문서 전체의 전제</p>
+      <p>DSX OS조차 “모델을 운영”하는 게 아니라 “<strong>factory(물리 인프라)를 운영</strong>”한다. AIPub은 그 위 ML 애플리케이션/플랫폼 레이어다. AIPub은 ten1010 클러스터/네트워크를 <em>연동·표시</em>할 수는 있어도 <em>소유·제어</em>하지 않는다 — 이 선이 적용안의 출발점이다.</p>
+    </div>
+  </section>
+
+  <!-- 4 -->
+  <section id="cm">
+    <p class="kicker">04 — 메커니즘</p>
+    <h2>구성 관리 5종과 desired-state / drift / reconcile</h2>
+    <div class="reading">
+      <p>요청서의 “MVCM” 대신, 아래 실재 도구들이 공통적으로 <strong>기준 정보(source-of-truth) → 실제 상태 diff → drift 분류 → (일부) 교정</strong> 패턴을 구현한다.</p>
+    </div>
+
+    <h3>NMX — 자동 교정에 가장 가까운 폐루프</h3>
+    <div class="reading"><p>NVLink fabric용. 텔레메트리→분석→제어의 닫힌 루프로, NVIDIA 스택 내에서 “drift 감지 → 자동 교정”에 가장 근접한 구조이며 AIPub reconcile 컨트롤러의 직접적 개념 템플릿이다.</p></div>
+    <div class="loop">
+      <div class="step"><div class="n">NMX-T</div><h5>Telemetry</h5><p>수집·집계·전송</p></div>
+      <div class="step"><div class="n">NMX-M</div><h5>Manager</h5><p>ML 추론으로 패턴 감지 → 구성 변경 결정</p></div>
+      <div class="step"><div class="n">NMX-C</div><h5>Controller</h5><p>nvlSM·GFM 구동, 실제 구성 enact</p></div>
+      <div class="step"><div class="n">Oasis</div><h5>Data lake</h5><p>이력 저장</p></div>
+    </div>
+
+    <div class="reading">
+      <h3>NVUE — 진짜 선언적 desired-state 모델</h3>
+      <p>NVIDIA 스택에서 <strong>쿠버네티스식 선언적 config에 가장 가깝고, AIPub에 가장 직접 전이 가능</strong>한 모델. 객체지향·스키마 구동 트리로 desired config를 <code>nv set</code>으로 선언하고, 상태를 네 가지로 분리한다.</p>
+      <ul class="clean">
+        <li><code>Pending</code> — 미커밋(= 의도된 변경)</li>
+        <li><code>Applied</code> — 커밋됨</li>
+        <li><code>Operational</code> — 실제 running 상태</li>
+        <li><code>Startup</code> — 영속화(<code>/etc/nvue.d/startup.yaml</code>)</li>
+      </ul>
+      <p><code>nv config diff</code>로 임의 두 상태를 비교해 <strong>의도 vs 실제 차이(drift)를 표면화</strong>한다.</p>
+
+      <h3>UFM · NetQ · CVT — 검증과 분류된 drift</h3>
+      <ul class="clean">
+        <li><strong>UFM</strong>(InfiniBand): 자동 디스커버리 + 13개 validation tests, system/performance 검증.</li>
+        <li><strong>NetQ</strong>(Ethernet): snapshot-and-compare(변경 전/후 diff), preventive validation(NVIDIA Air 디지털 트윈 + CI/CD), 실제 토폴로지를 blueprint 파일과 비교.</li>
+        <li><strong>CVT</strong>(케이블링): 토폴로지 파일이 “authoritative source”. drift를 <code>Wrong-neighbor</code> / <code>Wrong-port</code> / <code>Unknown-neighbor</code> / <code>Extra-cable</code>로 분류 — 단 <strong>감지 전용</strong>, 자동 교정은 안 함.</li>
+      </ul>
+    </div>
+
+    <div class="callout note">
+      <p class="lbl">감지 ≠ 교정</p>
+      <p>CVT·NetQ snapshot-compare·NVUE diff·UFM validation은 <strong>drift 감지/diff까지</strong>다. 닫힌 자동 reconcile 루프는 NMX-M→NMX-C와 Oracle OCI 사례에서만 확인된다. “diff 기능”과 “reconcile 루프”를 혼동하지 말 것. (OCI를 “완전한 선언적 IaC”로 규정하는 두 강한 주장은 검증에서 <span class="chip bad">refuted 1-2</span>.)</p>
+    </div>
+  </section>
+
+  <!-- 5 -->
+  <section id="aipub">
+    <p class="kicker">05 — 핵심</p>
+    <h2>AIPub 적용</h2>
+    <div class="reading">
+      <p><strong>결론부터.</strong> NVIDIA의 fabric 툴(NMX/UFM/CVT/NVUE)을 재구현하지 않는다. 그들이 검증한 <strong>제어 패턴과 운영 UX</strong>만 빌려 AIPub 레이어 자원(리소스 그룹/쿼터/RBAC/정책/레지스트리)에 적용한다. 그 패턴은 사실 쿠버네티스 오퍼레이터의 네이티브 모델이므로, <code>resource-group-controller</code>로 이미 절반은 와 있다.</p>
+    </div>
+
+    <h3>패턴 매핑</h3>
+    <div class="tablewrap">
+      <table>
+        <thead><tr><th>NVIDIA 자산</th><th>핵심 아이디어</th><th>AIPub 전이</th></tr></thead>
+        <tbody>
+          <tr><td><strong>NVUE</strong> 4-state + <code>config diff</code></td><td>의도(spec)와 실제(running)를 상태로 분리·비교</td><td>리소스 그룹/쿼터/정책의 <strong>desired vs observed diff 뷰</strong> + apply 전 미리보기</td></tr>
+          <tr><td><strong>NMX-M→C</strong>, <strong>OCI</strong> reconcile</td><td>drift 지속 감지 + 자동 교정</td><td>오퍼레이터 reconcile이 drift 감지 → <strong>자동 교정 또는 알림</strong></td></tr>
+          <tr><td><strong>CVT</strong> 분류된 drift</td><td>source-of-truth 대비 이산·actionable 분류</td><td><strong>“expected vs actual” 리포트</strong> — 누락 namespace, 쿼터 불일치, RBAC divergence 등</td></tr>
+          <tr><td><strong>DSX Sim</strong> / NetQ+Air</td><td>프로덕션 전 모델에서 변경 검증</td><td>변경 적용 전 <strong>dry-run·영향 시뮬레이션</strong></td></tr>
+          <tr><td><strong>UFM</strong> 13 tests</td><td>표준 validation 체크 집합</td><td>리소스 그룹 <strong>표준 정합성 체크 묶음</strong></td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="reading">
+      <h3>현황과 gap</h3>
+      <p><code>resource-group-controller</code>는 이미 <code>Project</code>/<code>AipubUser</code>/<code>NodeGroup</code>/<code>ImageHub</code> CR을 reconcile하며 파생 리소스(Namespace/RBAC/Quota/Secret/webhook)를 정합한다. 즉 핵심 루프는 존재한다. 빠져 있을 가능성이 큰 부분(코드 재확인 필요):</p>
+      <ul class="clean">
+        <li>사용자 노출 <strong>desired-vs-observed diff UI</strong>가 없음 (NVUE diff / CVT 리포트에 해당)</li>
+        <li>apply 전 <strong>dry-run/시뮬레이션 게이트</strong>가 없음 (DSX Sim에 해당)</li>
+        <li>drift의 <strong>명시적 분류·리포팅</strong>이 없음 (조용히 교정될 뿐 감사 자취가 안 남음)</li>
+        <li><strong>교정 vs 알림 정책</strong> 선택지가 불명확</li>
+      </ul>
+
+      <h3>단계별 도입 — 감지 먼저, 교정은 신중히</h3>
+    </div>
+    <div class="loop">
+      <div class="step"><div class="n">Phase 1</div><h5>Drift 가시화</h5><p>desired vs observed를 status/프론트에 노출, CVT식 카테고리 분류 (위험 0)</p></div>
+      <div class="step"><div class="n">Phase 2</div><h5>Validation-before-apply</h5><p>server-side apply <code>--dry-run</code>·webhook으로 영향 사전 계산</p></div>
+      <div class="step"><div class="n">Phase 3</div><h5>정책 기반 reconcile</h5><p><code>autoHeal</code>/<code>alertOnly</code>/<code>approvalRequired</code> 선언</p></div>
+      <div class="step"><div class="n">Phase 4</div><h5>(선택) GitOps</h5><p>멀티클러스터/감사 요구 시에만 외부 source-of-truth</p></div>
+    </div>
+
+    <div class="callout note">
+      <p class="lbl">안티패턴</p>
+      <p>① NVIDIA fabric 툴 재구현 ② “MVCM” 가상 명칭에 의존 ③ k8s가 이미 주는 것(reconcile/diff/dry-run/webhook) 평행 구현 ④ 감지를 곧장 자동 교정으로 ⑤ 물리 인프라 제어 주장 — 모두 피한다.</p>
+    </div>
+  </section>
+
+  <!-- 6 -->
+  <section id="bg">
+    <p class="kicker">06 — 선수 배경지식</p>
+    <h2>이 주제를 읽기 위한 배경지식</h2>
+    <div class="reading">
+      <p>위 내용을 온전히 이해하려면 크게 세 묶음의 사전 지식이 필요하다 — <strong>(A) 구성 관리·선언적 모델의 일반 개념</strong>, <strong>(B) 쿠버네티스 오퍼레이터 메커니즘</strong>, <strong>(C) 데이터센터 네트워크/AI Factory 인프라 용어</strong>. 모르는 카드만 골라 읽으면 된다.</p>
+    </div>
+
+    <h3>A. 구성 관리 · 선언적 모델</h3>
+    <div class="cards">
+      <div class="card"><p class="tag">개념</p><h4>선언적 vs 명령적</h4><p>명령적(imperative)은 “이 명령들을 실행하라”, 선언적(declarative)은 “최종 상태가 이래야 한다”를 기술하고 시스템이 도달 방법을 알아서 찾는다.</p><p class="why"><b>왜 중요</b>NVUE·k8s·AIPub CR이 전부 선언적. 이 글의 모든 패턴의 토대.</p></div>
+      <div class="card"><p class="tag">개념</p><h4>Source of truth · Desired state</h4><p>“있어야 할 상태”를 담은 권위 있는 원본. CVT의 토폴로지 파일, NVUE의 pending config, k8s의 CR spec이 모두 이것.</p><p class="why"><b>왜 중요</b>모든 비교(diff)의 기준점.</p></div>
+      <div class="card"><p class="tag">개념</p><h4>Drift</h4><p>실제 상태가 선언된 상태에서 벗어난 정도. 누가 수동으로 바꿨거나, 장애·부분 적용으로 발생. drift 감지 = 의도와 실제의 diff.</p><p class="why"><b>왜 중요</b>NVIDIA 도구 5종이 공통으로 하는 일.</p></div>
+      <div class="card"><p class="tag">개념</p><h4>Reconcile · Idempotency</h4><p>desired와 actual을 비교해 간극을 메우는 동작이 reconcile. 같은 입력에 몇 번 돌려도 결과가 같은 성질이 idempotency로, 안전한 반복 적용의 전제.</p><p class="why"><b>왜 중요</b>“감지”와 “교정”을 가르는 지점.</p></div>
+      <div class="card"><p class="tag">실무</p><h4>GitOps · IaC</h4><p>Infrastructure as Code = 인프라를 코드로 선언. GitOps는 Git을 source-of-truth로 두고 ArgoCD/Flux가 drift를 감지·동기화하는 방식.</p><p class="why"><b>왜 중요</b>Phase 4 옵션의 배경.</p></div>
+    </div>
+
+    <h3>B. 쿠버네티스 오퍼레이터</h3>
+    <div class="cards">
+      <div class="card"><p class="tag">k8s</p><h4>CRD / CR</h4><p>CRD는 새 리소스 “종류”를 k8s에 등록하는 스키마, CR은 그 인스턴스. AIPub의 <code>Project</code>·<code>Workspace</code> 등이 CR.</p><p class="why"><b>왜 중요</b>AIPub의 desired state가 사는 곳.</p></div>
+      <div class="card"><p class="tag">k8s</p><h4>Controller · Reconcile loop</h4><p>CR(spec=의도)을 watch해서 실제 클러스터(status=현실)와 비교하고 간극을 좁히는 무한 루프. 오퍼레이터 = 도메인 지식을 담은 컨트롤러.</p><p class="why"><b>왜 중요</b><code>resource-group-controller</code>가 바로 이것. NMX 루프와 같은 모양.</p></div>
+      <div class="card"><p class="tag">k8s</p><h4>spec vs status</h4><p>CR의 <code>spec</code>은 사용자가 선언한 의도, <code>status</code>는 컨트롤러가 기록한 관측된 현실. 둘의 차이가 곧 drift.</p><p class="why"><b>왜 중요</b>NVUE 4-state와 1:1 대응.</p></div>
+      <div class="card"><p class="tag">k8s</p><h4>Admission webhook · dry-run</h4><p>리소스가 저장되기 전 가로채 검증(validating)/변형(mutating)하는 훅. server-side apply <code>--dry-run</code>은 실제 적용 없이 결과를 미리 계산.</p><p class="why"><b>왜 중요</b>Phase 2 “적용 전 검증”의 네이티브 수단.</p></div>
+      <div class="card"><p class="tag">k8s</p><h4>RBAC · ResourceQuota · Namespace</h4><p>각각 권한, 자원 상한, 격리 경계. AIPub 리소스 그룹이 reconcile로 만들어내는 파생 리소스들.</p><p class="why"><b>왜 중요</b>drift 분류 카테고리의 대상.</p></div>
+    </div>
+
+    <h3>C. 데이터센터 네트워크 · AI Factory</h3>
+    <div class="cards">
+      <div class="card"><p class="tag">인프라</p><h4>AI Factory · DGX / SuperPOD</h4><p>대규모 GPU 학습 전용 데이터센터를 “AI 공장”으로 부른다. DGX는 NVIDIA GPU 서버, SuperPOD는 그 군집 참조 설계.</p><p class="why"><b>왜 중요</b>DSX가 다루는 대상 그 자체.</p></div>
+      <div class="card"><p class="tag">네트워크</p><h4>Fabric: NVLink · InfiniBand · Ethernet</h4><p>fabric = 노드를 잇는 고속 상호연결망. NVLink는 GPU 간(노드 내·랙 내), InfiniBand/Spectrum-X Ethernet은 노드 간. 도구가 fabric별로 갈리는 이유.</p><p class="why"><b>왜 중요</b>NMX/UFM/NVUE가 나뉘는 근거.</p></div>
+      <div class="card"><p class="tag">네트워크</p><h4>SDN · Subnet/Fabric Manager</h4><p>SDN은 제어를 소프트웨어 컨트롤 플레인으로 분리. Subnet Manager(IB)·GFM(NVLink)은 fabric의 경로·구성을 관장하는 두뇌.</p><p class="why"><b>왜 중요</b>NMX-C가 구동하는 것.</p></div>
+      <div class="card"><p class="tag">네트워크</p><h4>토폴로지 · 케이블링 검증</h4><p>스위치·노드 연결 구조가 토폴로지(예: spine-leaf). 수천 가닥 케이블이 설계도대로 꽂혔는지 확인하는 게 케이블링 검증.</p><p class="why"><b>왜 중요</b>CVT의 “기준→diff→분류” 사례.</p></div>
+      <div class="card"><p class="tag">운영</p><h4>Telemetry · 디지털 트윈</h4><p>장비가 내보내는 측정 데이터가 telemetry. 디지털 트윈은 실물의 정확한 가상 복제로, 바꾸기 전 시뮬레이션에 쓴다.</p><p class="why"><b>왜 중요</b>NMX-T 수집과 DSX Sim의 토대.</p></div>
+    </div>
+
+    <div class="callout key">
+      <p class="lbl">한 줄로</p>
+      <p>핵심 한 가지만 기억한다면 — <strong>“선언된 의도(desired)와 관측된 현실(actual)의 diff를 지속적으로 좁힌다”</strong>는 reconcile 사고방식이다. NVIDIA가 물리 fabric에서 한 것을, AIPub은 k8s 리소스에서 한다.</p>
+    </div>
+  </section>
+
+  <!-- 7 -->
+  <section id="verify" class="reading">
+    <p class="kicker">07 — 신뢰도</p>
+    <h2>출처와 검증</h2>
+    <p>조사는 <code>deep-research</code> 하네스로 수행했다 — 5개 검색 각도 fan-out → 21 소스 fetch → 95 claim 추출 → 상위 25 claim 3표 적대적 검증.</p>
+    <p>
+      <span class="chip good">23 confirmed</span>
+      <span class="chip bad">2 refuted</span>
+      <span class="chip neu">11 findings</span>
+      <span class="chip neu">103 agent calls</span>
+    </p>
+    <h3>읽을 때 주의</h3>
+    <ul class="clean">
+      <li>DSX/DSX OS claim은 거의 전부 NVIDIA 자체 2026-06 런칭 자료(보도자료·제품페이지·개발자블로그) — <strong>마케팅 프레이밍이 섞임</strong>. 공개 GitHub 레포명이 가장 강한 비-마케팅 신호.</li>
+      <li>DSX/Vera Rubin은 2026-03~06 발표된 매우 빠르게 변하는 영역 — 명칭·기능이 바뀔 수 있다.</li>
+      <li><strong>AIPub 적용안(05)은 분석가 합성</strong>이다(medium). 검증된 NVIDIA 패턴 + AIPub 아키텍처 문서에서 추론한 <em>제안</em>이지 sourced fact가 아니다. 착수 전 컨트롤러 코드로 현 reconcile/gap 재확인 필요.</li>
+    </ul>
+    <h3>대표 1차 출처</h3>
+    <div class="callout">
+      <p class="src">
+        nvidia.com/en-us/data-center/products/dsx/<br>
+        developer.nvidia.com/blog/nvidia-dsx-os-delivers-open-modular-software-…<br>
+        docs.nvidia.com/networking/…/nmx-controller-nmx-c-documentation<br>
+        docs.nvidia.com/networking/display/cablevalidationtool181/introduction<br>
+        docs.nvidia.com/…/cumulus-linux-55/…/NVUE-CLI/<br>
+        nvidia.com/en-us/networking/ethernet-switching/netq/ · /infiniband/ufm/<br>
+        blogs.oracle.com/cloud-infrastructure/behind-the-scenes-scale-nvidia-gb200-nvl72-deployments
+      </p>
+    </div>
+  </section>
+
+  <footer>
+    <p>전체 리서치 문서(검증 메타·refuted·open questions 포함)는 레포의 <code>docs/01~03</code> 마크다운에 있다 · <a href="https://github.com/juu-n-oo/nvidia-dsx-research">github.com/juu-n-oo/nvidia-dsx-research</a></p>
+  </footer>
+
+</div>
