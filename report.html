@@ -219,6 +219,111 @@ h4 {
 p { margin-bottom: 12px; max-width: 65ch; }
 p:last-child { margin-bottom: 0; }
 
+/* ── Abbreviations (with tooltip) ── */
+abbr {
+  text-decoration: underline dotted;
+  cursor: help;
+  transition: color .15s;
+  position: relative;
+}
+
+abbr:hover {
+  color: var(--green);
+}
+
+abbr {
+  cursor: pointer;
+}
+
+/* ── Tooltip Modal ── */
+.tooltip-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0,0,0,.5);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .2s ease;
+}
+
+.tooltip-modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.tooltip-modal {
+  background: var(--surface);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--r);
+  padding: 20px;
+  max-width: 600px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  box-shadow: 0 4px 20px rgba(0,0,0,.4);
+  position: relative;
+  animation: slideIn .2s ease;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: scale(.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.tooltip-modal-title {
+  font-family: var(--mono);
+  font-size: 12px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--green);
+  margin-bottom: 12px;
+}
+
+.tooltip-modal-content {
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.tooltip-modal-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  color: var(--text);
+  width: 32px;
+  height: 32px;
+  border-radius: 3px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: bold;
+  transition: all .15s;
+  font-family: system-ui;
+  line-height: 1;
+}
+
+.tooltip-modal-close:hover {
+  background: var(--border-strong);
+  color: var(--text-strong);
+}
+
 /* ── Inline code ── */
 code {
   font-family: var(--mono);
@@ -595,9 +700,65 @@ hr {
   color: var(--muted);
 }
 
+/* ── Tooltip ── */
+.term, abbr[data-tooltip] {
+  border-bottom: 1px dashed var(--muted-mid);
+  cursor: help;
+  text-decoration: none;
+}
+#tt {
+  position: fixed;
+  background: #19243a;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  padding: 9px 13px;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--text);
+  max-width: 300px;
+  z-index: 9999;
+  pointer-events: none;
+  display: none;
+  box-shadow: 0 8px 24px rgba(0,0,0,.55);
+}
+#tt strong {
+  font-family: var(--mono);
+  font-size: 10.5px;
+  color: var(--green);
+  display: block;
+  margin-bottom: 5px;
+  letter-spacing: .04em;
+}
+
+/* ── SVG diagrams ── */
+.diagram-wrap {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 20px 16px 12px;
+  margin: 16px 0;
+  overflow-x: auto;
+}
+.diagram-wrap svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  min-width: 520px;
+}
+.diagram-caption {
+  font-family: var(--mono);
+  font-size: 10px;
+  color: var(--muted);
+  text-align: center;
+  margin-top: 10px;
+  letter-spacing: .06em;
+}
+
 </style>
 </head>
 <body>
+
+<div id="tt"></div>
 
 <div class="page-wrap">
   <!-- TOC sidebar -->
@@ -654,28 +815,28 @@ hr {
       <h3>Drift (구성 표류)</h3>
       <p>선언된 desired state와 실제 운영 상태가 시간이 지나면서 달라지는 현상. 원인: 수동 변경, 외부 자동화, 하드웨어 장애, 오퍼레이터 버그. Drift 감지 → 분류(의도적/비의도적) → 교정이 Day-2 운영의 핵심 과제다.</p>
 
-      <h3>DPU (Data Processing Unit)</h3>
+      <h3><span class="term" data-term="DPU" data-def="Data Processing Unit: NVIDIA BlueField. CPU에서 네트워킹·스토리지·보안 처리를 offload하는 SmartNIC. 독립된 ARM 코어와 OS를 가지며 테넌트별 하드웨어 레벨 격리가 가능하다.">DPU (Data Processing Unit)</span></h3>
       <p>NVIDIA BlueField는 CPU에서 네트워킹·스토리지·보안 처리를 offload하는 SmartNIC. 호스트와 독립적인 ARM 코어와 OS를 가지며, DPU 위에서 격리된 소프트웨어를 실행할 수 있다. 이를 통해 테넌트 간 하드웨어 레벨 격리가 가능하다.</p>
 
-      <h3>HBN (Host-Based Networking)</h3>
-      <p>BlueField DPU의 네트워크 스택. DPU 위에서 OVS(Open vSwitch) 기반 L2/L3 forwarding을 수행해 호스트 네트워크 구성을 소프트웨어적으로 제어한다.</p>
+      <h3><span class="term" data-term="HBN" data-def="Host-Based Networking: BlueField DPU 위의 OVS(Open vSwitch) 기반 L2/L3 forwarding 스택. 호스트 네트워크를 소프트웨어로 제어하며 NICo DPU Agent가 이를 통해 구성을 적용한다.">HBN (Host-Based Networking)</span></h3>
+      <p>BlueField DPU의 네트워크 스택. DPU 위에서 <span class="term" data-term="OVS" data-def="Open vSwitch: 소프트웨어 기반 멀티레이어 가상 스위치. 포트와 플로우 규칙으로 패킷 forwarding을 제어. DPF DPUServiceInterface/Chain이 OVS 포트·플로우를 선언한다.">OVS</span>(Open vSwitch) 기반 L2/L3 forwarding을 수행해 호스트 네트워크 구성을 소프트웨어적으로 제어한다.</p>
 
-      <h3>Fabric 유형과 용도</h3>
+      <h3><span class="term" data-term="Fabric" data-def="물리 네트워크 인프라 스택. AI Factory에서는 3종: Spectrum-X Ethernet(범용), InfiniBand(저지연 집합통신), NVLink(GPU 간 고대역폭). 각각 다른 관리 도구를 사용한다.">Fabric</span> 유형과 용도</h3>
       <div class="table-wrap">
         <table>
           <thead><tr><th>Fabric</th><th>프로토콜</th><th>주 용도</th><th>관리 도구</th></tr></thead>
           <tbody>
-            <tr><td>Spectrum-X Ethernet</td><td>RoCEv2</td><td>범용 네트워킹, East-West 트래픽</td><td>NVUE + NetQ + NICo DPU Agent</td></tr>
-            <tr><td>InfiniBand (Quantum)</td><td>IB</td><td>MPI/집합통신, 저지연 GPU 간 통신</td><td>UFM + NICo IbFabricMonitor</td></tr>
-            <tr><td>NVLink (GB200)</td><td>독점</td><td>GPU-to-GPU 고대역폭 메모리 공유</td><td>NMX + NICo NvlPartitionMonitor</td></tr>
+            <tr><td>Spectrum-X Ethernet</td><td><span class="term" data-term="RoCEv2" data-def="RDMA over Converged Ethernet v2: Ethernet 위에서 InfiniBand급 저지연 RDMA를 제공하는 프로토콜. GPU 클러스터 집합통신에 사용된다.">RoCEv2</span></td><td>범용 네트워킹, East-West 트래픽</td><td><span class="term" data-term="NVUE" data-def="NVIDIA User Experience CLI/API: Cumulus Linux의 선언적 구성 시스템. Pending→Applied→Operational→Startup 4-state 모델로 스위치 구성을 관리.">NVUE</span> + <span class="term" data-term="NetQ" data-def="NVIDIA NetQ: Cumulus Linux 스위치의 telemetry 수집 및 network validation 플랫폼. BGP/EVPN/MTU/RoCE 등 14+ 체크, snapshot-compare로 상태 변화 감지.">NetQ</span> + NICo DPU Agent</td></tr>
+            <tr><td>InfiniBand (Quantum)</td><td>IB</td><td><span class="term" data-term="MPI" data-def="Message Passing Interface: HPC/ML 분산 학습의 표준 집합통신(AllReduce, AllGather 등) 인터페이스. InfiniBand의 저지연 RDMA를 활용해 GPU 간 gradient 교환에 사용.">MPI</span>/집합통신, 저지연 GPU 간 통신</td><td><span class="term" data-term="UFM" data-def="Unified Fabric Manager: NVIDIA Quantum InfiniBand fabric 관리 소프트웨어. 13 validation tests, topology compare, one-click 보안 프로파일(PKey/MAD key/GRH) 제공.">UFM</span> + NICo IbFabricMonitor</td></tr>
+            <tr><td>NVLink (GB200)</td><td>독점</td><td>GPU-to-GPU 고대역폭 메모리 공유</td><td><span class="term" data-term="NMX" data-def="NVLink Management Extension: NVLink fabric Day-2 운영을 위한 4컴포넌트 폐루프. NMX-T(텔레메트리)→NMX-M(ML 분석)→NMX-C(교정, nvlSM/GFM 운영)→Oasis(데이터레이크).">NMX</span> + NICo NvlPartitionMonitor</td></tr>
           </tbody>
         </table>
       </div>
 
-      <h3>ArgoCD와 GitOps</h3>
-      <p>ArgoCD는 Git 저장소(또는 Helm 차트)를 source-of-truth로 삼아 k8s 클러스터 상태를 지속 reconcile하는 GitOps 도구. DPF는 ArgoCD를 Git source-of-truth 방식이 아닌 <em>Helm-as-engine</em> 방식으로 사용한다 — ArgoCD Application 객체를 프로그래밍으로 생성해 Helm chart 설치를 간접 실행한다.</p>
+      <h3><span class="term" data-term="ArgoCD" data-def="k8s용 GitOps/선언적 지속 배포 도구. Git 저장소를 source-of-truth로 cluster 상태를 reconcile. DPF는 Git방식이 아닌 Helm 설치 엔진으로 ArgoCD를 사용한다.">ArgoCD</span>와 GitOps</h3>
+      <p>ArgoCD는 Git 저장소(또는 Helm 차트)를 source-of-truth로 삼아 k8s 클러스터 상태를 지속 reconcile하는 GitOps 도구. DPF는 ArgoCD를 Git source-of-truth 방식이 아닌 <em>Helm-as-engine</em> 방식으로 사용한다 — ArgoCD Application 객체를 프로그래밍으로 생성해 <span class="term" data-term="Helm" data-def="k8s 패키지 관리자. Chart(패키지)로 k8s 리소스 집합을 번들·배포·업그레이드. DPF는 DPUService → ArgoCD → Helm chart 경로로 DPU에 서비스를 배포한다.">Helm chart</span> 설치를 간접 실행한다.</p>
 
-      <h3>Kamaji</h3>
+      <h3><span class="term" data-term="Kamaji" data-def="Control plane-as-a-service: 여러 k8s 컨트롤 플레인(API server + etcd)을 management 클러스터 내 Pod으로 실행. DPF는 Kamaji TenantControlPlane으로 DPU Cluster를 프로비저닝한다.">Kamaji</span></h3>
       <p>Control plane-as-a-service: 다수의 k8s 컨트롤 플레인을 management 클러스터 내 Pod으로 실행. DPF는 Kamaji <code>TenantControlPlane</code> 객체로 DPU 클러스터의 API server·etcd를 프로비저닝한다.</p>
     </section>
 
@@ -685,26 +846,60 @@ hr {
 
       <p>DSX OS는 NVIDIA AI Factory를 운영하는 오픈소스 모듈형 소프트웨어 스택이다. 단일 제품이 아니라 독립적인 GitHub 저장소들의 집합이며, 각 컴포넌트는 명확히 분리된 책임을 가진다.</p>
 
-      <div class="arch-diagram">
-        <pre>
-DSX OS 컴포넌트 맵
-────────────────────────────────────────────────────────
- infra-controller-core    NICo (NVIDIA Infra Controller)
-   └─ Rust(49.5%) + Go   bare-metal lifecycle + multi-fabric
-      (33.8%)             HW-enforced multitenant networking
-
- doca-platform            DPF (DOCA Platform Framework)
-   └─ Go(~97.5%)          DPU k8s 오케스트레이션
-                          Host Cluster ↔ DPU Cluster
-
- fleet-intelligence-agent 읽기 전용 GPU/IB 텔레메트리
-   └─ Go (gpud 기반)      구성 변경 없음
-
- dsx-exchange              마켓플레이스 / 서비스 카탈로그
- nvcf                      NVIDIA Cloud Functions 런타임
-────────────────────────────────────────────────────────
-"Config Manager (MVCM)" 라는 제품은 존재하지 않는다.
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 310" aria-label="DSX OS 아키텍처 스택">
+          <defs>
+            <marker id="s0u" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4a5568"/></marker>
+            <marker id="s0g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+            <marker id="s0b" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b72d4"/></marker>
+          </defs>
+          <!-- Physical Layer -->
+          <rect x="1" y="218" width="698" height="88" rx="4" fill="#0d1318" stroke="#1e2633"/>
+          <text x="10" y="233" font-family="ui-monospace,monospace" font-size="9" fill="#3a4a5a" letter-spacing="1.2">PHYSICAL AI FACTORY INFRASTRUCTURE</text>
+          <rect x="8" y="240" width="116" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/><text x="66" y="266" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">GPU Server</text><text x="66" y="281" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">H100 / GB200</text>
+          <rect x="132" y="240" width="116" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/><text x="190" y="266" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">BlueField DPU</text><text x="190" y="281" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">SmartNIC + ARM</text>
+          <rect x="256" y="240" width="116" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/><text x="314" y="266" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">IB Fabric</text><text x="314" y="281" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">Quantum / UFM</text>
+          <rect x="380" y="240" width="116" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/><text x="438" y="266" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">NVLink Fabric</text><text x="438" y="281" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">GB200 / NMX</text>
+          <rect x="504" y="240" width="186" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/><text x="597" y="266" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">Spectrum-X Ethernet</text><text x="597" y="281" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">RoCEv2 · NVUE + NetQ</text>
+          <!-- Arrows up (Physical→DSX) -->
+          <line x1="180" y1="218" x2="180" y2="202" stroke="#2c3a4a" stroke-width="1" marker-end="url(#s0u)"/>
+          <line x1="350" y1="218" x2="350" y2="202" stroke="#2c3a4a" stroke-width="1" marker-end="url(#s0u)"/>
+          <line x1="520" y1="218" x2="520" y2="202" stroke="#2c3a4a" stroke-width="1" marker-end="url(#s0u)"/>
+          <text x="350" y="212" font-family="ui-monospace,monospace" font-size="8.5" fill="#3a4a5a" text-anchor="middle">HW APIs · gRPC · rshim</text>
+          <!-- DSX OS Layer -->
+          <rect x="1" y="118" width="698" height="82" rx="4" fill="#0d1a12" stroke="#1a2e1a"/>
+          <text x="10" y="133" font-family="ui-monospace,monospace" font-size="9" fill="#3a5a3a" letter-spacing="1.2">DSX OS LAYER</text>
+          <rect x="8" y="140" width="218" height="52" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="117" y="162" font-family="ui-monospace,monospace" font-size="12" font-weight="600" fill="#76b900" text-anchor="middle">NICo</text>
+          <text x="117" y="178" font-family="ui-monospace,monospace" font-size="9.5" fill="#5a7a5a" text-anchor="middle">Rust 49.5% + Go 33.8%</text>
+          <rect x="234" y="140" width="218" height="52" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="343" y="162" font-family="ui-monospace,monospace" font-size="12" font-weight="600" fill="#76b900" text-anchor="middle">DPF</text>
+          <text x="343" y="178" font-family="ui-monospace,monospace" font-size="9.5" fill="#5a7a5a" text-anchor="middle">Go ~97.5% · DPU k8s</text>
+          <rect x="460" y="140" width="232" height="52" rx="3" fill="#121d13" stroke="#2c3a4a"/>
+          <text x="576" y="159" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">fleet-intelligence</text>
+          <text x="576" y="174" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">-agent</text>
+          <text x="576" y="186" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">Go · 읽기 전용 텔레메트리</text>
+          <!-- Arrows up (DSX→AIPub) -->
+          <line x1="200" y1="118" x2="200" y2="102" stroke="#3b72d4" stroke-width="1" marker-end="url(#s0b)"/>
+          <line x1="400" y1="118" x2="400" y2="102" stroke="#3b72d4" stroke-width="1" marker-end="url(#s0b)"/>
+          <text x="350" y="112" font-family="ui-monospace,monospace" font-size="8.5" fill="#2a3a5a" text-anchor="middle">k8s API · CNI · NetworkPolicy</text>
+          <!-- AIPub Layer -->
+          <rect x="1" y="16" width="698" height="84" rx="4" fill="#0d1220" stroke="#1e2a40"/>
+          <text x="10" y="31" font-family="ui-monospace,monospace" font-size="9" fill="#3a4a7a" letter-spacing="1.2">AIPUB PLATFORM LAYER (k8s)</text>
+          <rect x="8" y="38" width="238" height="54" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.2"/>
+          <text x="127" y="60" font-family="ui-monospace,monospace" font-size="11" font-weight="600" fill="#3b72d4" text-anchor="middle">resource-group-controller</text>
+          <text x="127" y="75" font-family="ui-monospace,monospace" font-size="9" fill="#3a4a7a" text-anchor="middle">Namespace · RBAC · ResourceQuota</text>
+          <rect x="254" y="38" width="160" height="54" rx="3" fill="#111828" stroke="#2c3a4a"/>
+          <text x="334" y="60" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">Spring Boot</text>
+          <text x="334" y="75" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">aipub-backend API</text>
+          <rect x="422" y="38" width="140" height="54" rx="3" fill="#111828" stroke="#2c3a4a"/>
+          <text x="492" y="60" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">aipub-web</text>
+          <text x="492" y="75" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">React Frontend</text>
+          <rect x="570" y="38" width="122" height="54" rx="3" fill="#111828" stroke="#2c3a4a"/>
+          <text x="631" y="60" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">Harbor</text>
+          <text x="631" y="75" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">ImageHub Registry</text>
+        </svg>
+        <div class="diagram-caption">DSX OS 3-레이어 아키텍처 — Physical / DSX OS / AIPub Platform</div>
       </div>
 
       <div class="caveat">
@@ -715,9 +910,9 @@ DSX OS 컴포넌트 맵
 
     <!-- NICo 심층 -->
     <section class="section" id="nico">
-      <h2>NICo (NVIDIA Infra Controller) 심층</h2>
+      <h2><abbr data-tooltip="NVIDIA Infra Controller — bare-metal 라이프사이클 관리 + DPU 기반 hardware-enforced 멀티테넌트 네트워크 격리 시스템. NICo가 DPU를 활용해 네트워크를 제어함">NICo (NVIDIA Infra Controller)</abbr> 심층</h2>
 
-      <p><strong>역할</strong>: site-local, zero-trust, bare-metal lifecycle 관리 + DPU 기반 hardware-enforced 멀티테넌트 네트워크 격리. 소스: <code>github.com/NVIDIA/infra-controller-core</code></p>
+      <p><strong>역할</strong>: site-local, zero-trust, bare-metal lifecycle 관리 + <abbr data-tooltip="Data Processing Unit">DPU</abbr> 기반 hardware-enforced 멀티테넌트 네트워크 격리. 소스: <code>github.com/NVIDIA/infra-controller-core</code></p>
 
       <h3>핵심 확인 사항 <span class="badge badge-confirmed">3-0 확인</span></h3>
 
@@ -749,37 +944,90 @@ DSX OS 컴포넌트 맵
         </div>
       </div>
 
-      <h4>패턴 1: InfiniBand + NVLink — Monitor 태스크 기반</h4>
+      <h4>두 가지 Drift 감지·Reconcile 패턴 비교</h4>
 
-      <div class="arch-diagram">
-        <pre>
-NICo Core
-  ├─ IbFabricMonitor  (주기적 실행)
-  │    └─ expected partition/pkey vs actual (UFM API 조회)
-  │         └─ mismatch → UFM REST API 호출로 교정
-  │
-  └─ NvlPartitionMonitor  (주기적 실행)
-       └─ expected NVLink partition vs actual (NVLink Manager 조회)
-            └─ mismatch → NVLink Manager API 호출로 교정
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 340" aria-label="NICo 이원화 Drift 패턴">
+          <defs>
+            <marker id="n1d" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+            <marker id="n1u" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4a5568"/></marker>
+            <marker id="n1r" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b72d4"/></marker>
+          </defs>
+          <!-- Column headers -->
+          <text x="175" y="18" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#76b900" text-anchor="middle" letter-spacing=".5">패턴 1 — MONITOR TASK</text>
+          <text x="175" y="30" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">InfiniBand · NVLink</text>
+          <text x="525" y="18" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#3b72d4" text-anchor="middle" letter-spacing=".5">패턴 2 — DPU AGENT PULL-PUSH</text>
+          <text x="525" y="30" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">Ethernet (BlueField HBN)</text>
+          <!-- Divider -->
+          <line x1="350" y1="10" x2="350" y2="330" stroke="#1e2633" stroke-width="1" stroke-dasharray="4,3"/>
+
+          <!-- === LEFT COLUMN === -->
+          <!-- NICo Core box -->
+          <rect x="60" y="44" width="230" height="44" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="175" y="63" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#76b900" text-anchor="middle">NICo Core</text>
+          <text x="175" y="78" font-family="ui-monospace,monospace" font-size="9" fill="#5a7a5a" text-anchor="middle">Rust 바이너리 · background tasks</text>
+          <!-- Arrow down -->
+          <line x1="175" y1="88" x2="175" y2="108" stroke="#76b900" stroke-width="1.2" marker-end="url(#n1d)"/>
+          <text x="195" y="101" font-family="ui-monospace,monospace" font-size="8.5" fill="#5a7a5a">spawns</text>
+          <!-- Monitor Tasks box -->
+          <rect x="40" y="110" width="270" height="60" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="175" y="130" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">IbFabricMonitor</text>
+          <text x="175" y="144" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">NvlPartitionMonitor</text>
+          <text x="175" y="160" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">주기적 실행 (background goroutine)</text>
+          <!-- Arrow down -->
+          <line x1="175" y1="170" x2="175" y2="190" stroke="#4a5568" stroke-width="1" marker-end="url(#n1u)"/>
+          <text x="195" y="183" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568">polls</text>
+          <!-- External APIs box -->
+          <rect x="40" y="192" width="270" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="175" y="214" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">External Fabric Manager API</text>
+          <text x="175" y="229" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">UFM REST API (IB partition/pkey)</text>
+          <text x="175" y="241" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">NVLink Manager API (NVL partition)</text>
+          <!-- compare annotation -->
+          <text x="175" y="262" font-family="ui-monospace,monospace" font-size="8.5" fill="#76b900" text-anchor="middle">expected ≠ actual → mismatch!</text>
+          <!-- Arrow down (correction) -->
+          <line x1="175" y1="268" x2="175" y2="288" stroke="#76b900" stroke-width="1.5" marker-end="url(#n1d)"/>
+          <!-- Correction box -->
+          <rect x="60" y="290" width="230" height="38" rx="3" fill="#0d1d0d" stroke="#76b900" stroke-width="1.5"/>
+          <text x="175" y="307" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#76b900" text-anchor="middle">Fabric API 교정 호출</text>
+          <text x="175" y="320" font-family="ui-monospace,monospace" font-size="8.5" fill="#5a7a5a" text-anchor="middle">partition/pkey 재설정</text>
+
+          <!-- === RIGHT COLUMN === -->
+          <!-- NICo Core (right) -->
+          <rect x="410" y="44" width="230" height="44" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="525" y="63" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#76b900" text-anchor="middle">NICo Core</text>
+          <text x="525" y="78" font-family="ui-monospace,monospace" font-size="9" fill="#5a7a5a" text-anchor="middle">gRPC server · desired config 보관</text>
+          <!-- gRPC label between NICo and DPU Agent -->
+          <line x1="525" y1="88" x2="525" y2="108" stroke="#3b72d4" stroke-width="1.2" marker-end="url(#n1r)"/>
+          <text x="545" y="101" font-family="ui-monospace,monospace" font-size="8.5" fill="#3b72d4">GetManagedHostNetworkConfig</text>
+          <!-- DPU Agent box -->
+          <rect x="390" y="110" width="270" height="58" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.2"/>
+          <text x="525" y="131" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#3b72d4" text-anchor="middle">DPU Agent</text>
+          <text x="525" y="146" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">BlueField 위에서 실행</text>
+          <text x="525" y="160" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">30초마다 desired config 폴링</text>
+          <!-- Arrow back up (observed state report) -->
+          <path d="M 648 132 Q 670 132 670 66 Q 670 66 642 66" fill="none" stroke="#4a5568" stroke-width="1" marker-end="url(#n1u)" stroke-dasharray="3,2"/>
+          <text x="672" y="100" font-family="ui-monospace,monospace" font-size="7.5" fill="#4a5568" transform="rotate(90,672,100)">RecordDpuNetworkStatus</text>
+          <!-- Arrow down to HBN -->
+          <line x1="525" y1="168" x2="525" y2="188" stroke="#3b72d4" stroke-width="1.2" marker-end="url(#n1r)"/>
+          <text x="545" y="181" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568">apply</text>
+          <!-- HBN box -->
+          <rect x="390" y="190" width="270" height="48" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="525" y="211" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">HBN (Host-Based Networking)</text>
+          <text x="525" y="228" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">OVS 기반 L2/L3 forwarding (DPU 위)</text>
+          <!-- Arrow down to result -->
+          <line x1="525" y1="238" x2="525" y2="258" stroke="#4a5568" stroke-width="1" marker-end="url(#n1u)"/>
+          <!-- Result box -->
+          <rect x="410" y="260" width="230" height="50" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="525" y="280" font-family="ui-monospace,monospace" font-size="10.5" fill="#c8d0e0" text-anchor="middle">스위치 / OVS 포트 구성</text>
+          <text x="525" y="296" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">→ 테넌트 네트워크 격리 적용</text>
+          <!-- Reconcile loop annotation -->
+          <rect x="392" y="314" width="266" height="18" rx="2" fill="#0d1a10" stroke="none"/>
+          <text x="525" y="326" font-family="ui-monospace,monospace" font-size="8.5" fill="#76b900" text-anchor="middle">↺ 30초 reconcile 루프 반복</text>
+        </svg>
+        <div class="diagram-caption">좌: Monitor Task 기반 (IB/NVLink 외부 fabric manager 교정) &nbsp;|&nbsp; 우: DPU Agent Pull-Push (Ethernet HBN 직접 적용)</div>
       </div>
 
-      <h4>패턴 2: DPU 관리 Ethernet — DPU Agent pull-push</h4>
-
-      <div class="arch-diagram">
-        <pre>
-NICo Core  ←──gRPC──→  DPU Agent (BlueField 위에서 실행)
-              ↑                    ↓
-  RecordDpuNetworkStatus  GetManagedHostNetworkConfig
-  (observed state 보고)   (desired config 30초마다 폴링)
-                                   ↓
-                          HBN (Host-Based Networking) 적용
-                                   ↓
-                          스위치/OVS 구성 변경
-        </pre>
-      </div>
-
-      <p>DPU Agent는 30초마다 NICo에 desired config를 폴링하고, HBN에 적용한 뒤, observed state를 gRPC로 다시 보고한다. 이것이 NICo의 Ethernet 레이어 reconcile 루프다.</p>
+      <p>DPU Agent는 30초마다 NICo에 <span class="term" data-term="desired config" data-def="원하는 네트워크 구성 상태. NICo에 선언된 호스트의 목표 네트워크 설정을 의미한다.">desired config</span>를 폴링하고, <span class="term" data-term="HBN" data-def="Host-Based Networking: BlueField DPU 위의 OVS(Open vSwitch) 기반 L2/L3 forwarding 스택. 호스트 네트워크를 소프트웨어적으로 제어한다.">HBN</span>에 적용한 뒤, observed state를 <span class="term" data-term="gRPC" data-def="Google Remote Procedure Call: Protocol Buffers 기반 고성능 RPC 프레임워크. NICo Core와 DPU Agent 사이 통신에 사용된다.">gRPC</span>로 다시 보고한다. 이것이 NICo의 Ethernet 레이어 reconcile 루프다.</p>
 
       <h3>Helm 배포 구조</h3>
       <p>NICo는 Helm 3-레이어로 배포된다: <code>common-services</code> → <code>nico-core</code> → <code>nico-services</code>. k8s 위에 배포되지만 k8s-native microservices suite는 아니다 — Rust 단일 바이너리 기반이며 k8s는 실행 환경으로 사용한다.</p>
@@ -792,39 +1040,66 @@ NICo Core  ←──gRPC──→  DPU Agent (BlueField 위에서 실행)
 
     <!-- DPF 심층 -->
     <section class="section" id="dpf">
-      <h2>DPF (DOCA Platform Framework) 심층</h2>
+      <h2><abbr data-tooltip="DOCA Platform Framework — DPU를 Kubernetes처럼 프로비저닝·관리하는 오픈소스 프레임워크. Host Cluster + DPU Cluster 이중 k8s 아키텍처">DPF (DOCA Platform Framework)</abbr> 심층</h2>
 
-      <p><strong>역할</strong>: BlueField DPU를 k8s 네이티브 방식으로 프로비저닝하고, DPU 위의 DOCA 서비스를 선언적으로 오케스트레이션. 소스: <code>github.com/NVIDIA/doca-platform</code> (Go ~97.5%)</p>
+      <p><strong>역할</strong>: BlueField <abbr data-tooltip="Data Processing Unit">DPU</abbr>를 k8s 네이티브 방식으로 프로비저닝하고, DPU 위의 DOCA 서비스를 선언적으로 오케스트레이션. 소스: <code>github.com/NVIDIA/doca-platform</code> (Go ~97.5%)</p>
 
       <h3>이중 Kubernetes 아키텍처 <span class="badge badge-confirmed">3-0 확인</span></h3>
 
-      <div class="arch-diagram">
-        <pre>
-┌─────────────────────────────────────────────────────┐
-│  HOST CLUSTER (k8s)                                 │
-│  ┌─────────────────────────────────────────────┐   │
-│  │  DPF Operator                               │   │
-│  │   ├─ Provisioning system                    │   │
-│  │   │   ├─ DPU controller                     │   │
-│  │   │   ├─ BFB controller                     │   │
-│  │   │   ├─ DPUSet controller                  │   │
-│  │   │   └─ DPUCluster controller              │   │
-│  │   ├─ DPUService system                      │   │
-│  │   │   ├─ DPUService controller              │   │
-│  │   │   └─ DPUDeployment controller           │   │
-│  │   └─ DPUServiceChain system                 │   │
-│  │       ├─ ServiceInterface controller        │   │
-│  │       └─ ServiceChain controller            │   │
-│  └─────────────────────────────────────────────┘   │
-│       │ DPU Cluster 컨트롤플레인 호스팅 (Kamaji)       │
-└───────┼─────────────────────────────────────────────┘
-        │
-┌───────┴──────────────────────────────────────────┐
-│  DPU CLUSTER (k8s — Kamaji TenantControlPlane)   │
-│  DPU 노드들 (BlueField, kubelet join)              │
-│  ArgoCD + DOCA 서비스 workloads                    │
-└──────────────────────────────────────────────────┘
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 390" aria-label="DPF 이중 Kubernetes 아키텍처">
+          <defs>
+            <marker id="d1d" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4a5568"/></marker>
+            <marker id="d1g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+          </defs>
+          <!-- Host Cluster outer -->
+          <rect x="1" y="1" width="698" height="256" rx="5" fill="#0e1a0e" stroke="#76b900" stroke-width="1.5"/>
+          <text x="14" y="19" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#76b900" letter-spacing=".5">HOST CLUSTER (k8s)</text>
+          <text x="14" y="33" font-family="ui-monospace,monospace" font-size="9" fill="#3a5a3a">DPU를 프로비저닝하고 DPU Cluster 컨트롤 플레인을 호스팅</text>
+          <!-- DPF Operator inner -->
+          <rect x="12" y="42" width="674" height="152" rx="4" fill="#0a160a" stroke="#2c3a2c"/>
+          <text x="22" y="58" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#c8d0e0" letter-spacing=".3">DPF Operator</text>
+          <!-- Three subsystem boxes -->
+          <!-- Provisioning System -->
+          <rect x="22" y="66" width="202" height="118" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="123" y="83" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#c8d0e0" text-anchor="middle">Provisioning System</text>
+          <text x="123" y="99" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPUSet controller</text>
+          <text x="123" y="112" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">BFB controller</text>
+          <text x="123" y="125" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPU controller</text>
+          <text x="123" y="138" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPUFlavor controller</text>
+          <text x="123" y="151" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPUCluster controller</text>
+          <text x="123" y="164" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">→ DMS via rshim 플래시</text>
+          <!-- DPUService System -->
+          <rect x="250" y="66" width="194" height="118" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="347" y="83" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#c8d0e0" text-anchor="middle">DPUService System</text>
+          <text x="347" y="99" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPUService controller</text>
+          <text x="347" y="112" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPUDeployment controller</text>
+          <text x="347" y="128" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPUServiceIPAM controller</text>
+          <text x="347" y="144" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">→ ArgoCD App 생성</text>
+          <text x="347" y="160" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">→ Helm → DPU Cluster</text>
+          <!-- DPUServiceChain System -->
+          <rect x="470" y="66" width="206" height="118" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="573" y="83" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#c8d0e0" text-anchor="middle">DPUServiceChain System</text>
+          <text x="573" y="99" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">ServiceInterface controller</text>
+          <text x="573" y="112" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">ServiceChain controller</text>
+          <text x="573" y="128" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">→ DPU OVS 포트 생성</text>
+          <text x="573" y="144" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">→ DPU OVS 플로우 설정</text>
+          <!-- Kamaji box -->
+          <rect x="12" y="202" width="674" height="44" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="350" y="220" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#c8d0e0" text-anchor="middle">Kamaji TenantControlPlane</text>
+          <text x="350" y="236" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPU Cluster의 API server · etcd를 Host Cluster 내 Pod으로 실행 (control plane as a service)</text>
+          <!-- Arrow down -->
+          <line x1="350" y1="257" x2="350" y2="300" stroke="#4a5568" stroke-width="1.5" marker-end="url(#d1d)"/>
+          <text x="362" y="271" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568">BFB 플래시 (rshim)</text>
+          <text x="362" y="283" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568">kubelet → Kamaji join</text>
+          <!-- DPU Cluster box -->
+          <rect x="1" y="302" width="698" height="84" rx="5" fill="#0e1828" stroke="#3b72d4" stroke-width="1.5"/>
+          <text x="14" y="320" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#3b72d4" letter-spacing=".5">DPU CLUSTER (k8s — Kamaji TenantControlPlane)</text>
+          <rect x="12" y="328" width="200" height="48" rx="3" fill="#111828" stroke="#2c3a4a"/><text x="112" y="350" font-family="ui-monospace,monospace" font-size="10" fill="#c8d0e0" text-anchor="middle">BlueField DPU Nodes</text><text x="112" y="366" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">kubelet joined</text>
+          <rect x="222" y="328" width="220" height="48" rx="3" fill="#111828" stroke="#2c3a4a"/><text x="332" y="350" font-family="ui-monospace,monospace" font-size="10" fill="#c8d0e0" text-anchor="middle">ArgoCD</text><text x="332" y="366" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">Helm chart 설치 엔진</text>
+          <rect x="452" y="328" width="238" height="48" rx="3" fill="#111828" stroke="#2c3a4a"/><text x="571" y="350" font-family="ui-monospace,monospace" font-size="10" fill="#c8d0e0" text-anchor="middle">DOCA Service Pods</text><text x="571" y="366" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPU 위 네트워크 기능 실행</text>
+        </svg>
+        <div class="diagram-caption">Host Cluster (DPF Operator + Kamaji) → DPU Cluster — 이중 Kubernetes 아키텍처</div>
       </div>
 
       <div class="finding">
@@ -856,21 +1131,33 @@ NICo Core  ←──gRPC──→  DPU Agent (BlueField 위에서 실행)
 
       <h4>프로비저닝 흐름</h4>
 
-      <div class="arch-diagram">
-        <pre>
-사용자: DPUSet + BFB + DPUFlavor CR 생성
-          ↓
-DPF Operator → DPU controller
-          ↓
-  Host Node에 DMS (DOCA Management Service) Pod 배포
-          ↓
-  DMS가 rshim 인터페이스로 BlueField에 BFB 플래시
-          ↓
-  BlueField 재부팅 → 네트워크 설정 적용
-          ↓
-  DPU의 kubelet이 Kamaji TenantControlPlane (DPU Cluster)에 join
-  (Host Cluster에 join하지 않는다 — 별도 컨트롤 플레인)
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 280" aria-label="DPF DPU 프로비저닝 흐름">
+          <defs>
+            <marker id="p1d" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+          </defs>
+          <!-- Step boxes vertical chain -->
+          <rect x="150" y="10" width="400" height="40" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="350" y="27" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">사용자: DPUSet + BFB + DPUFlavor CR 생성</text>
+          <text x="350" y="42" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">Host Cluster에 desired state 선언</text>
+          <line x1="350" y1="50" x2="350" y2="68" stroke="#76b900" stroke-width="1.2" marker-end="url(#p1d)"/>
+          <rect x="150" y="70" width="400" height="38" rx="3" fill="#131921" stroke="#76b900" stroke-width="1.2"/>
+          <text x="350" y="87" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#76b900" text-anchor="middle">DPF Operator → DPU controller</text>
+          <text x="350" y="101" font-family="ui-monospace,monospace" font-size="9" fill="#5a7a5a" text-anchor="middle">reconcile loop 진입</text>
+          <line x1="350" y1="108" x2="350" y2="126" stroke="#76b900" stroke-width="1.2" marker-end="url(#p1d)"/>
+          <rect x="150" y="128" width="400" height="38" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="350" y="145" font-family="ui-monospace,monospace" font-size="10.5" fill="#c8d0e0" text-anchor="middle">Host Node에 DMS Pod 배포</text>
+          <text x="350" y="159" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">DOCA Management Service — DPU 관리 에이전트</text>
+          <line x1="350" y1="166" x2="350" y2="184" stroke="#76b900" stroke-width="1.2" marker-end="url(#p1d)"/>
+          <rect x="150" y="186" width="400" height="38" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="350" y="203" font-family="ui-monospace,monospace" font-size="10.5" fill="#c8d0e0" text-anchor="middle">DMS → rshim → BlueField BFB 플래시</text>
+          <text x="350" y="217" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" text-anchor="middle">rshim: Host-BlueField 직접 접근 인터페이스</text>
+          <line x1="350" y1="224" x2="350" y2="242" stroke="#76b900" stroke-width="1.2" marker-end="url(#p1d)"/>
+          <rect x="150" y="244" width="400" height="32" rx="3" fill="#0d1d20" stroke="#3b72d4" stroke-width="1.5"/>
+          <text x="350" y="260" font-family="ui-monospace,monospace" font-size="10.5" font-weight="600" fill="#3b72d4" text-anchor="middle">DPU kubelet → Kamaji TenantControlPlane join</text>
+          <text x="350" y="272" font-family="ui-monospace,monospace" font-size="8.5" fill="#3a4a7a" text-anchor="middle">(Host Cluster 아님 — 별도 DPU Cluster 컨트롤 플레인)</text>
+        </svg>
+        <div class="diagram-caption">DPU 프로비저닝: CR 선언 → DMS → rshim BFB 플래시 → Kamaji join</div>
       </div>
 
       <div class="caveat">
@@ -895,23 +1182,40 @@ DPF Operator → DPU controller
 
       <h3>DPUService desired-state 전달 경로 <span class="badge badge-medium">2-1 확인</span></h3>
 
-      <div class="arch-diagram">
-        <pre>
-사용자: DPUService CR 생성 (Helm chart 참조)
-          ↓
-DPUService controller (Host Cluster)
-          ↓
-  ArgoCD Application 객체 생성 (Host Cluster 내)
-          ↓
-  ArgoCD system이 Application reconcile
-          ↓
-  Helm chart를 DPU Cluster에 설치·유지
-          ↓
-  DPU 노드 위 DOCA 서비스 Pod 실행
-
-주의: Git repo가 source-of-truth가 아님.
-       ArgoCD를 Helm 설치 엔진으로 사용하는 패턴.
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 90" aria-label="DPUService Desired-State 흐름">
+          <defs>
+            <marker id="ds1" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+          </defs>
+          <!-- 5-box horizontal chain -->
+          <rect x="4" y="18" width="116" height="52" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="62" y="41" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">DPUService CR</text>
+          <text x="62" y="56" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">사용자 선언</text>
+          <text x="62" y="67" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">Helm chart 참조</text>
+          <line x1="120" y1="44" x2="138" y2="44" stroke="#76b900" stroke-width="1.2" marker-end="url(#ds1)"/>
+          <rect x="140" y="18" width="130" height="52" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="205" y="41" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#76b900" text-anchor="middle">DPUService Controller</text>
+          <text x="205" y="56" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">Host Cluster 내</text>
+          <text x="205" y="67" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">reconcile loop</text>
+          <line x1="270" y1="44" x2="288" y2="44" stroke="#76b900" stroke-width="1.2" marker-end="url(#ds1)"/>
+          <rect x="290" y="18" width="116" height="52" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="348" y="41" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">ArgoCD App</text>
+          <text x="348" y="56" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">Application 객체</text>
+          <text x="348" y="67" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">Host Cluster에 생성</text>
+          <line x1="406" y1="44" x2="424" y2="44" stroke="#76b900" stroke-width="1.2" marker-end="url(#ds1)"/>
+          <rect x="426" y="18" width="116" height="52" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="484" y="41" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#c8d0e0" text-anchor="middle">Helm Chart</text>
+          <text x="484" y="56" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">ArgoCD가 렌더링</text>
+          <text x="484" y="67" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">+ reconcile 유지</text>
+          <line x1="542" y1="44" x2="560" y2="44" stroke="#76b900" stroke-width="1.2" marker-end="url(#ds1)"/>
+          <rect x="562" y="18" width="132" height="52" rx="3" fill="#0d1d20" stroke="#3b72d4" stroke-width="1.5"/>
+          <text x="628" y="41" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#3b72d4" text-anchor="middle">DOCA Service Pod</text>
+          <text x="628" y="56" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a7a" text-anchor="middle">DPU Cluster 위</text>
+          <text x="628" y="67" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a7a" text-anchor="middle">BlueField에서 실행</text>
+          <!-- Note at bottom -->
+          <text x="350" y="84" font-family="ui-monospace,monospace" font-size="7.5" fill="#76b900" text-anchor="middle">★ Git이 source-of-truth가 아님 — ArgoCD를 Helm 설치 엔진으로만 사용</text>
+        </svg>
+        <div class="diagram-caption">DPUService desired-state 전달 경로 (5단계)</div>
       </div>
 
       <div class="caveat">
@@ -921,20 +1225,48 @@ DPUService controller (Host Cluster)
 
       <h3>네트워크 서비스 체이닝 (Service Function Chaining)</h3>
 
-      <div class="arch-diagram">
-        <pre>
-사용자 선언:
-  DPUServiceInterface  →  OVS 포트 (물리 NIC, VF 매핑)
-  DPUServiceChain      →  OVS 플로우 (패킷 forwarding 규칙)
-  DPUServiceIPAM       →  CNI IP 주소 할당
-
-컨트롤러 동작:
-  ServiceInterface controller → DPU 위 OVS에 포트 생성
-  ServiceChain controller     → DPU 위 OVS에 플로우 프로그래밍
-  IPAM controller             → nvidia-k8s-ipam으로 IP 풀 관리
-
-결과: 테넌트별 격리된 네트워크 체인이 DPU 하드웨어 레벨에서 강제됨
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 200" aria-label="DPF 네트워크 서비스 체이닝">
+          <defs>
+            <marker id="sc1" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+            <marker id="sc2" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b72d4"/></marker>
+          </defs>
+          <!-- Header row: CRDs -->
+          <text x="10" y="15" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" letter-spacing=".5">사용자 선언 (CRD)</text>
+          <rect x="10" y="22" width="194" height="36" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="107" y="37" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#76b900" text-anchor="middle">DPUServiceInterface</text>
+          <text x="107" y="52" font-family="ui-monospace,monospace" font-size="8.5" fill="#5a7a5a" text-anchor="middle">OVS 포트 선언 (NIC/VF 매핑)</text>
+          <rect x="253" y="22" width="194" height="36" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="350" y="37" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#76b900" text-anchor="middle">DPUServiceChain</text>
+          <text x="350" y="52" font-family="ui-monospace,monospace" font-size="8.5" fill="#5a7a5a" text-anchor="middle">OVS 플로우 선언 (forwarding)</text>
+          <rect x="496" y="22" width="194" height="36" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="593" y="37" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#76b900" text-anchor="middle">DPUServiceIPAM</text>
+          <text x="593" y="52" font-family="ui-monospace,monospace" font-size="8.5" fill="#5a7a5a" text-anchor="middle">CNI IP 주소 할당</text>
+          <!-- Arrows down -->
+          <line x1="107" y1="58" x2="107" y2="100" stroke="#76b900" stroke-width="1.2" marker-end="url(#sc1)"/>
+          <line x1="350" y1="58" x2="350" y2="100" stroke="#76b900" stroke-width="1.2" marker-end="url(#sc1)"/>
+          <line x1="593" y1="58" x2="593" y2="100" stroke="#76b900" stroke-width="1.2" marker-end="url(#sc1)"/>
+          <!-- Controller row -->
+          <text x="10" y="97" font-family="ui-monospace,monospace" font-size="9" fill="#4a5568" letter-spacing=".5">컨트롤러 동작</text>
+          <rect x="10" y="104" width="194" height="36" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="107" y="121" font-family="ui-monospace,monospace" font-size="9.5" fill="#c8d0e0" text-anchor="middle">ServiceInterface ctrl</text>
+          <text x="107" y="135" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPU OVS 포트 생성</text>
+          <rect x="253" y="104" width="194" height="36" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="350" y="121" font-family="ui-monospace,monospace" font-size="9.5" fill="#c8d0e0" text-anchor="middle">ServiceChain ctrl</text>
+          <text x="350" y="135" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">DPU OVS 플로우 프로그래밍</text>
+          <rect x="496" y="104" width="194" height="36" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="593" y="121" font-family="ui-monospace,monospace" font-size="9.5" fill="#c8d0e0" text-anchor="middle">IPAM ctrl</text>
+          <text x="593" y="135" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a5568" text-anchor="middle">nvidia-k8s-ipam IP 풀</text>
+          <!-- Arrows down to result -->
+          <line x1="107" y1="140" x2="107" y2="162" stroke="#3b72d4" stroke-width="1.2" marker-end="url(#sc2)"/>
+          <line x1="350" y1="140" x2="350" y2="162" stroke="#3b72d4" stroke-width="1.2" marker-end="url(#sc2)"/>
+          <line x1="593" y1="140" x2="593" y2="162" stroke="#3b72d4" stroke-width="1.2" marker-end="url(#sc2)"/>
+          <!-- Result box -->
+          <rect x="10" y="164" width="680" height="32" rx="3" fill="#0d1420" stroke="#3b72d4" stroke-width="1.5"/>
+          <text x="350" y="181" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#3b72d4" text-anchor="middle">테넌트별 격리된 네트워크 체인 — DPU 하드웨어 레벨에서 강제</text>
+          <text x="350" y="193" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a7a" text-anchor="middle">소프트웨어 정책이 아닌 OVS 데이터 경로 자체를 분리</text>
+        </svg>
+        <div class="diagram-caption">DPF 네트워크 서비스 체이닝: CRD 선언 → 컨트롤러 → DPU OVS 하드웨어 격리</div>
       </div>
     </section>
 
@@ -974,6 +1306,37 @@ DPUService controller (Host Cluster)
     <!-- Day-0/1/2 Lifecycle -->
     <section class="section" id="lifecycle">
       <h2>AI Factory 네트워크 구성 관리 Lifecycle</h2>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 68" aria-label="Day-0/1/2 라이프사이클 타임라인">
+          <!-- Timeline bar -->
+          <line x1="40" y1="34" x2="660" y2="34" stroke="#2c3a4a" stroke-width="2"/>
+          <!-- Arrow at end -->
+          <polygon points="660,30 670,34 660,38" fill="#2c3a4a"/>
+          <!-- Day-0 -->
+          <circle cx="120" cy="34" r="14" fill="#0d1318" stroke="#4a5568" stroke-width="1.5"/>
+          <text x="120" y="39" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#6b7a94" text-anchor="middle">D-0</text>
+          <text x="120" y="16" font-family="ui-monospace,monospace" font-size="9" fill="#6b7a94" text-anchor="middle">부트스트랩</text>
+          <text x="120" y="6" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">CVT · DPUSet 선언</text>
+          <text x="120" y="58" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">케이블링 검증</text>
+          <!-- Day-1 -->
+          <circle cx="350" cy="34" r="14" fill="#1a1200" stroke="#c8941a" stroke-width="1.5"/>
+          <text x="350" y="39" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#c8941a" text-anchor="middle">D-1</text>
+          <text x="350" y="16" font-family="ui-monospace,monospace" font-size="9" fill="#c8941a" text-anchor="middle">프로비저닝</text>
+          <text x="350" y="6" font-family="ui-monospace,monospace" font-size="8" fill="#7a5a1a" text-anchor="middle">DPF · UFM · NVUE 설정</text>
+          <text x="350" y="58" font-family="ui-monospace,monospace" font-size="8" fill="#7a5a1a" text-anchor="middle">ArgoCD → DPU 서비스 배포</text>
+          <!-- Day-2 -->
+          <circle cx="580" cy="34" r="14" fill="#0d1d0d" stroke="#76b900" stroke-width="2"/>
+          <text x="580" y="39" font-family="ui-monospace,monospace" font-size="9" font-weight="700" fill="#76b900" text-anchor="middle">D-2</text>
+          <text x="580" y="16" font-family="ui-monospace,monospace" font-size="9" fill="#76b900" text-anchor="middle">운영</text>
+          <text x="580" y="6" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">NICo Drift 감지·교정</text>
+          <text x="580" y="58" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">NMX 폐루프 · NetQ 검증</text>
+          <!-- Connector ticks -->
+          <line x1="120" y1="30" x2="120" y2="20" stroke="#3a4a5a" stroke-width="1"/>
+          <line x1="350" y1="30" x2="350" y2="20" stroke="#7a5a1a" stroke-width="1"/>
+          <line x1="580" y1="30" x2="580" y2="20" stroke="#5a7a5a" stroke-width="1"/>
+        </svg>
+      </div>
 
       <div class="day-grid">
         <div class="day-card">
@@ -1034,32 +1397,32 @@ DPUService controller (Host Cluster)
 
     <!-- Fabric별 구성 모델 -->
     <section class="section" id="fabric">
-      <h2>Fabric별 구성 관리 모델 심층</h2>
+      <h2><abbr data-tooltip="물리 네트워크 인프라">Fabric</abbr>별 구성 관리 모델 심층</h2>
 
       <div class="fabric-grid">
         <div class="fabric-card">
           <div class="fabric-name">Spectrum-X Ethernet</div>
-          <div class="fabric-tool">NVUE + NetQ + NICo DPU Agent</div>
+          <div class="fabric-tool">NVUE + NetQ + <abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr> <abbr data-tooltip="Data Processing Unit">DPU</abbr> Agent</div>
           <p><strong>NVUE 4-state 모델</strong>: Pending → Applied → Operational → Startup. 전체 Cumulus Linux 구성을 단일 트리로 선언. <code>nv config diff &lt;state1&gt; &lt;state2&gt;</code>로 임의 두 상태 비교.</p>
           <p><strong>NetQ 검증</strong>: BGP(7개 테스트), EVPN, 인터페이스, MTU, RoCE, 토폴로지, VLAN, VxLAN 등 14+ validation 체크. Snapshot 비교: added(green)/removed(red)/modified(orange) 색상 분류.</p>
         </div>
 
         <div class="fabric-card">
           <div class="fabric-name">InfiniBand (Quantum)</div>
-          <div class="fabric-tool">UFM + NICo IbFabricMonitor</div>
+          <div class="fabric-tool">UFM + <abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr> IbFabricMonitor</div>
           <p><strong>UFM</strong>: 13 validation tests, topology compare (기대 vs 실제). "One-click" 보안 프로파일 3종: General / Bare Metal Cloud / Secured Bare Metal Cloud — PKey 격리 + MAD key 보호 + GRH 강제 오케스트레이션.</p>
           <p><strong>NICo IbFabricMonitor</strong>: UFM API로 expected vs actual 파티션 비교 → mismatch 시 UFM 교정 API 호출.</p>
         </div>
 
         <div class="fabric-card">
           <div class="fabric-name">NVLink (GB200)</div>
-          <div class="fabric-tool">NMX + NICo NvlPartitionMonitor</div>
+          <div class="fabric-tool">NMX + <abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr> NvlPartitionMonitor</div>
           <p><strong>NMX 4-컴포넌트 폐루프</strong>: NMX-T(텔레메트리 수집) → NMX-M(ML 분석, 구성 변경 결정) → NMX-C(교정 실행, nvlSM + GFM 운영) → NMX Oasis(데이터 레이크). 가장 자동화된 reconcile 루프.</p>
           <p><strong>NICo NvlPartitionMonitor</strong>: NVLink Manager API로 파티션 drift 감지·교정.</p>
         </div>
       </div>
 
-      <h3>NVUE 4-state 모델과 k8s spec/status 대응</h3>
+      <h3><abbr data-tooltip="물리 네트워크 인프라">Fabric</abbr> 4-state 모델과 k8s spec/status 대응</h3>
 
       <div class="table-wrap">
         <table>
@@ -1082,22 +1445,22 @@ DPUService controller (Host Cluster)
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>Fabric</th><th>격리 수단</th><th>구성 표현</th></tr></thead>
+          <thead><tr><th><abbr data-tooltip="물리 네트워크 인프라">Fabric</abbr></th><th>격리 수단</th><th>구성 표현</th></tr></thead>
           <tbody>
             <tr>
               <td>InfiniBand</td>
               <td>PKey (partition key) + MAD key 보호</td>
-              <td>UFM 보안 프로파일 또는 NICo IbFabricMonitor가 관리하는 expected partition 목록</td>
+              <td>UFM 보안 프로파일 또는 <abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr> IbFabricMonitor가 관리하는 expected partition 목록</td>
             </tr>
             <tr>
               <td>NVLink</td>
               <td>NVLink partition (NvlPartitionMonitor 관리)</td>
-              <td>NICo desired state에 partition 선언 → NVLink Manager API로 강제</td>
+              <td><abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr> desired state에 partition 선언 → NVLink Manager API로 강제</td>
             </tr>
             <tr>
-              <td>Ethernet (DPU)</td>
+              <td>Ethernet (<abbr data-tooltip="Data Processing Unit">DPU</abbr>)</td>
               <td>OVS 포트/플로우 레벨 격리 (HBN)</td>
-              <td>DPUServiceInterface + DPUServiceChain CRD → DPU OVS 프로그래밍</td>
+              <td>DPUServiceInterface + DPUServiceChain CRD → <abbr data-tooltip="Data Processing Unit">DPU</abbr> OVS 프로그래밍</td>
             </tr>
           </tbody>
         </table>
@@ -1117,22 +1480,22 @@ DPUService controller (Host Cluster)
 
       <div class="boundary-callout">
         <div class="label">레이어 경계 — 핵심 전제</div>
-        <strong>NVIDIA (NICo/DPF)</strong>는 물리 fabric/DPU 인프라 레이어를 담당한다. <strong>AIPub (resource-group-controller)</strong>는 그 위 k8s 플랫폼 레이어에서 동작한다. AIPub이 물리 fabric을 직접 제어하지 않는다 — 이 경계를 지켜야 설계가 올바르다.
+        <strong>NVIDIA (<abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr>/<abbr data-tooltip="DOCA Platform Framework">DPF</abbr>)</strong>는 물리 <abbr data-tooltip="물리 네트워크 인프라">fabric</abbr>/<abbr data-tooltip="Data Processing Unit">DPU</abbr> 인프라 레이어를 담당한다. <strong>AIPub (resource-group-controller)</strong>는 그 위 k8s 플랫폼 레이어에서 동작한다. AIPub이 물리 <abbr data-tooltip="물리 네트워크 인프라">fabric</abbr>을 직접 제어하지 않는다 — 이 경계를 지켜야 설계가 올바르다.
       </div>
 
       <h3>구조적 동형성 (Isomorphism)</h3>
 
-      <p>NICo와 AIPub resource-group-controller는 구조적으로 동일한 패턴을 다른 레이어에서 구현하고 있다:</p>
+      <p><abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr>와 AIPub resource-group-controller는 구조적으로 동일한 패턴을 다른 레이어에서 구현하고 있다:</p>
 
       <div class="table-wrap">
         <table>
-          <thead><tr><th>개념</th><th>NICo/DPF (인프라 레이어)</th><th>AIPub resource-group-controller (플랫폼 레이어)</th></tr></thead>
+          <thead><tr><th>개념</th><th><abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr>/<abbr data-tooltip="DOCA Platform Framework">DPF</abbr> (인프라 레이어)</th><th>AIPub resource-group-controller (플랫폼 레이어)</th></tr></thead>
           <tbody>
-            <tr><td>Desired state 선언</td><td>NICo API에 host/partition 등록, DPUSet CR</td><td>ResourceGroup / Project CR spec</td></tr>
-            <tr><td>Observed state 수집</td><td>DPU Agent gRPC 보고, Monitor 태스크 조회</td><td>k8s API 조회 (Namespace/RBAC/NetworkPolicy 현재 상태)</td></tr>
+            <tr><td>Desired state 선언</td><td><abbr data-tooltip="NVIDIA Infra Controller">NICo</abbr> API에 host/partition 등록, DPUSet CR</td><td>ResourceGroup / Project CR spec</td></tr>
+            <tr><td>Observed state 수집</td><td><abbr data-tooltip="Data Processing Unit">DPU</abbr> Agent gRPC 보고, Monitor 태스크 조회</td><td>k8s API 조회 (Namespace/RBAC/NetworkPolicy 현재 상태)</td></tr>
             <tr><td>Diff 계산</td><td>expected vs actual 비교</td><td>server-side apply dry-run → managed fields diff</td></tr>
             <tr><td>Reconcile 실행</td><td>HBN 적용, UFM/NVLink API 호출</td><td>controller-runtime reconcile loop</td></tr>
-            <tr><td>정책 강제</td><td>DPU 하드웨어 레벨</td><td>admission webhook + NetworkPolicy</td></tr>
+            <tr><td>정책 강제</td><td><abbr data-tooltip="Data Processing Unit">DPU</abbr> 하드웨어 레벨</td><td>admission webhook + NetworkPolicy</td></tr>
             <tr><td>텔레메트리 분리</td><td>fleet-intelligence-agent (읽기 전용)</td><td>별도 상태 수집기 (제안)</td></tr>
           </tbody>
         </table>
@@ -1166,25 +1529,58 @@ spec:
 
       <h4>2. Reconcile Loop 확장 (controller-runtime)</h4>
 
-      <div class="arch-diagram">
-        <pre>
-ResourceGroup CR 변경 (spec.networkPolicy)
-         ↓
-resource-group-controller reconcile loop
-         ↓
-  [기존] Namespace, RoleBinding, ResourceQuota reconcile
-         ↓
-  [신규] NetworkPolicy reconcile
-    - server-side apply dry-run → desired-vs-actual diff 계산
-    - diff가 있으면: NetworkPolicy apply (또는 patch)
-    - diff 없으면: 대기
-         ↓
-  [신규] CNI annotations (bandwidth limits)
-    - Pod에 bandwidth annotation 주입 (admission webhook)
-         ↓
-  status 업데이트
-    - networkPolicyStatus: { applied: [...], drift: [...] }
-        </pre>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 290" aria-label="AIPub Reconcile 확장">
+          <defs>
+            <marker id="ap1" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b72d4"/></marker>
+            <marker id="ap1g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+            <marker id="ap1m" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#4a5568"/></marker>
+          </defs>
+          <!-- ResourceGroup CR -->
+          <rect x="200" y="8" width="300" height="42" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.5"/>
+          <text x="350" y="26" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#3b72d4" text-anchor="middle">ResourceGroup CR</text>
+          <text x="350" y="42" font-family="ui-monospace,monospace" font-size="8.5" fill="#3a4a7a" text-anchor="middle">spec.networkPolicy 필드 추가 (신규)</text>
+          <!-- Arrow down -->
+          <line x1="350" y1="50" x2="350" y2="72" stroke="#3b72d4" stroke-width="1.5" marker-end="url(#ap1)"/>
+          <!-- Reconcile loop box -->
+          <rect x="150" y="74" width="400" height="42" rx="3" fill="#121d28" stroke="#3b72d4" stroke-width="1.5"/>
+          <text x="350" y="93" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#3b72d4" text-anchor="middle">resource-group-controller reconcile()</text>
+          <text x="350" y="108" font-family="ui-monospace,monospace" font-size="8.5" fill="#3a4a7a" text-anchor="middle">controller-runtime · server-side apply dry-run으로 diff 계산</text>
+          <!-- Fan-out arrows -->
+          <line x1="210" y1="116" x2="80" y2="154" stroke="#4a5568" stroke-width="1" marker-end="url(#ap1m)"/>
+          <line x1="280" y1="116" x2="255" y2="154" stroke="#4a5568" stroke-width="1" marker-end="url(#ap1m)"/>
+          <line x1="420" y1="116" x2="445" y2="154" stroke="#4a5568" stroke-width="1" marker-end="url(#ap1m)"/>
+          <line x1="490" y1="116" x2="620" y2="154" stroke="#76b900" stroke-width="1.5" marker-end="url(#ap1g)"/>
+          <!-- 4 output boxes -->
+          <rect x="10" y="156" width="140" height="52" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="80" y="175" font-family="ui-monospace,monospace" font-size="9.5" fill="#6b7a94" text-anchor="middle">Namespace</text>
+          <text x="80" y="190" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">[기존]</text>
+          <text x="80" y="202" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">프로젝트 격리</text>
+          <rect x="185" y="156" width="140" height="52" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="255" y="175" font-family="ui-monospace,monospace" font-size="9.5" fill="#6b7a94" text-anchor="middle">RoleBinding</text>
+          <text x="255" y="190" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">[기존]</text>
+          <text x="255" y="202" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">RBAC 권한</text>
+          <rect x="375" y="156" width="140" height="52" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="445" y="175" font-family="ui-monospace,monospace" font-size="9.5" fill="#6b7a94" text-anchor="middle">ResourceQuota</text>
+          <text x="445" y="190" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">[기존]</text>
+          <text x="445" y="202" font-family="ui-monospace,monospace" font-size="8" fill="#3a4a5a" text-anchor="middle">리소스 제한</text>
+          <!-- NEW NetworkPolicy box (highlighted) -->
+          <rect x="548" y="150" width="148" height="64" rx="3" fill="#0d1d10" stroke="#76b900" stroke-width="2"/>
+          <text x="572" y="162" font-family="ui-monospace,monospace" font-size="8" font-weight="700" fill="#76b900">★ 신규</text>
+          <text x="622" y="173" font-family="ui-monospace,monospace" font-size="9.5" font-weight="700" fill="#76b900" text-anchor="middle">NetworkPolicy</text>
+          <text x="622" y="188" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">dry-run diff 계산</text>
+          <text x="622" y="200" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">apply / patch</text>
+          <text x="622" y="210" font-family="ui-monospace,monospace" font-size="8" fill="#5a7a5a" text-anchor="middle">+ webhook bandwidth</text>
+          <!-- Arrow from NetworkPolicy to drift status -->
+          <line x1="622" y1="214" x2="622" y2="236" stroke="#76b900" stroke-width="1.2" marker-end="url(#ap1g)"/>
+          <!-- Status box -->
+          <rect x="200" y="238" width="300" height="48" rx="3" fill="#0d1820" stroke="#3b72d4" stroke-width="1"/>
+          <text x="350" y="256" font-family="ui-monospace,monospace" font-size="9.5" font-weight="600" fill="#3b72d4" text-anchor="middle">status.networkPolicyStatus</text>
+          <text x="350" y="271" font-family="ui-monospace,monospace" font-size="8.5" fill="#3a4a7a" text-anchor="middle">{ applied: [...], drift: [Unexpected|Stale|Missing|Intentional] }</text>
+          <line x1="622" y1="238" x2="500" y2="238" stroke="#76b900" stroke-width="1" stroke-dasharray="3,2"/>
+          <line x1="500" y1="238" x2="500" y2="245" stroke="#76b900" stroke-width="1" marker-end="url(#ap1g)"/>
+        </svg>
+        <div class="diagram-caption">resource-group-controller reconcile 확장 — 기존 Namespace/RBAC/Quota에 NetworkPolicy + 드리프트 분류 추가</div>
       </div>
 
       <h4>3. Server-side Apply Dry-run으로 Diff 가시화</h4>
@@ -1392,5 +1788,101 @@ err := r.Client.Patch(ctx, desiredNetworkPolicy,
   </main>
 </div>
 
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  // abbr 요소들에 클릭 이벤트 추가
+  const abbrs = document.querySelectorAll('abbr[data-tooltip]');
+
+  abbrs.forEach(abbr => {
+    abbr.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      showTooltipModal(this);
+    });
+  });
+
+  // 배경 클릭 시 닫기
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('tooltip-modal-overlay')) {
+      closeTooltipModal();
+    }
+  });
+});
+
+function showTooltipModal(abbr) {
+  // 이미 열려있으면 닫기
+  const existing = document.querySelector('.tooltip-modal-overlay');
+  if (existing) {
+    existing.remove();
+  }
+
+  const tooltip = abbr.getAttribute('data-tooltip');
+  const label = abbr.textContent;
+
+  // 모달 HTML 생성
+  const overlay = document.createElement('div');
+  overlay.className = 'tooltip-modal-overlay';
+
+  const modal = document.createElement('div');
+  modal.className = 'tooltip-modal';
+
+  modal.innerHTML = `
+    <div class="tooltip-modal-title">${label}</div>
+    <div class="tooltip-modal-content">${tooltip}</div>
+    <button class="tooltip-modal-close" onclick="closeTooltipModal()">×</button>
+  `;
+
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+
+  // 애니메이션 트리거
+  setTimeout(() => {
+    overlay.classList.add('active');
+  }, 10);
+
+  // ESC 키로 닫기
+  document.addEventListener('keydown', handleEscKey);
+}
+
+function closeTooltipModal() {
+  const overlay = document.querySelector('.tooltip-modal-overlay');
+  if (overlay) {
+    overlay.classList.remove('active');
+    setTimeout(() => {
+      overlay.remove();
+    }, 200);
+  }
+  document.removeEventListener('keydown', handleEscKey);
+}
+
+function handleEscKey(e) {
+  if (e.key === 'Escape') {
+    closeTooltipModal();
+  }
+}
+</script>
+<script>
+(function() {
+  var tt = document.getElementById('tt');
+  document.querySelectorAll('.term, abbr[data-tooltip]').forEach(function(el) {
+    el.addEventListener('mouseenter', function(e) {
+      var name = el.dataset.term || el.textContent.trim().split(/\s+/).slice(0,5).join(' ');
+      var def = el.dataset.def || el.dataset.tooltip || '';
+      tt.innerHTML = '<strong>' + name + '</strong>' + def;
+      tt.style.display = 'block';
+      place(e);
+    });
+    el.addEventListener('mousemove', place);
+    el.addEventListener('mouseleave', function() { tt.style.display = 'none'; });
+  });
+  function place(e) {
+    var pad = 14, w = tt.offsetWidth || 300, h = tt.offsetHeight || 80;
+    var x = e.clientX + pad, y = e.clientY + pad;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+    tt.style.left = x + 'px'; tt.style.top = y + 'px';
+  }
+})();
+</script>
 </body>
 </html>
