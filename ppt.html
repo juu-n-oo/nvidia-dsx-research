@@ -35,7 +35,7 @@
     font-size:clamp(26px,4.4vw,52px); margin-bottom:3vh}
   .sub{color:var(--muted); font-size:clamp(15px,2vw,24px); line-height:1.6; max-width:58ch}
   ul.pts{list-style:none; max-width:74ch}
-  ul.pts li{position:relative; padding-left:2.4vw; margin:1.6vh 0; font-size:clamp(15px,2vw,23px); line-height:1.5; color:var(--body)}
+  ul.pts li{position:relative; padding-left:2.4vw; margin:1.4vh 0; font-size:clamp(13px,1.7vw,19px); line-height:1.5; color:var(--body)}
   ul.pts li:before{content:"›"; position:absolute; left:0; color:var(--accent); font-weight:700}
   ul.pts li b, .body-strong{color:var(--text); font-weight:650}
   ul.pts li .m{color:var(--muted); font-size:.86em}
@@ -122,31 +122,64 @@
   <div class="kx">현재 상태 <b>Developer Preview</b> — 프로덕션 비권장 · aipub은 제품 이식이 아닌 <b>패턴 차용</b> 관점.</div>
 </section>
 
+<!-- 2b · 레이어 포지셔닝 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">02</span>레이어 · 포지셔닝</div>
+  <h2 class="stitle">AI 팩토리 속 NVCM의 위치</h2>
+  <p class="lead">NVCM은 <b>네트워크 스위치 구성</b> 레이어 · AIPub은 그 위 <b>k8s 플랫폼</b> 레이어 — <b>서로 다른 층</b>.</p>
+  <div class="minisvg" style="max-width:min(1120px,96vw); margin-top:1.6vh">
+    <svg viewBox="0 0 820 290" role="img" aria-label="AI 팩토리 레이어 스택과 NVCM 위치">
+      <!-- ⑤ 워크로드 -->
+      <rect x="120" y="20" width="584" height="44" rx="9" fill="#2b2620" stroke="#4a4436" stroke-width="1.3"/>
+      <text x="412" y="48" text-anchor="middle" fill="#e6edf3" font-size="15">⑤ ML 워크로드 — 학습 · 추론 Job</text>
+      <!-- ④ AIPub -->
+      <rect x="120" y="71" width="584" height="44" rx="9" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="2"/>
+      <text x="412" y="99" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">④ k8s 플랫폼 — AIPub · Project · Quota · RBAC</text>
+      <text x="714" y="100" fill="#58a6ff" font-size="13" font-weight="700">◀ 우리(AIPub)</text>
+      <!-- ③ k8s -->
+      <rect x="120" y="122" width="584" height="44" rx="9" fill="#2b2620" stroke="#4a4436" stroke-width="1.3"/>
+      <text x="412" y="150" text-anchor="middle" fill="#e6edf3" font-size="15">③ k8s 클러스터 — 노드 · CNI</text>
+      <!-- ② NVCM -->
+      <rect x="120" y="173" width="584" height="44" rx="9" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
+      <text x="412" y="201" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">② 네트워크 스위치 구성 — OS · config 생성/버전/배포</text>
+      <text x="714" y="202" fill="#7ee787" font-size="13" font-weight="700">◀ NVCM</text>
+      <!-- ① 물리 -->
+      <rect x="120" y="224" width="584" height="44" rx="9" fill="#241f18" stroke="#4a4436" stroke-width="1.3"/>
+      <text x="412" y="246" text-anchor="middle" fill="#cfc7b6" font-size="14">① 물리 인프라 — GPU 서버 · 스위치 HW · 케이블</text>
+      <text x="412" y="261" text-anchor="middle" fill="#8a8296" font-size="11.5">fabric 제어(NICo / DPF · DPU)</text>
+    </svg>
+  </div>
+  <ul class="pts">
+    <li><b>NVCM 진입점 = ②</b> — 스위치 HW·케이블은 이미 있는 상태(①)에서 <b>그 스위치의 OS·config를 자동화</b></li>
+    <li><b>Day-0</b>는 AI 팩토리 전체가 아니라 <b>스위치가 처음 부팅되는 시점</b> <span class="m">(레이어마다 각자의 Day-0가 있음)</span></li>
+    <li><b>NVCM ≠ AIPub</b> — 층이 다름(②↔④) · 직접 얽히지 않음 → 제품이 아닌 <b>패턴만 차용</b></li>
+  </ul>
+</section>
+
 <!-- 3 · 핵심 패턴 -->
 <section class="slide">
-  <div class="eyebrow"><span class="sn">02</span>핵심 패턴</div>
+  <div class="eyebrow"><span class="sn">03</span>핵심 패턴</div>
   <h2 class="stitle">핵심 흐름 — Day-0 / 1 / 2</h2>
-  <p class="lead">중심은 <b>Day-1 파이프라인</b>(SoT→이벤트→렌더→저장) · 앞뒤로 <b>Day-0 온보딩</b>과 <b>Day-2 배포</b>가 이어진다.</p>
-  <div class="minisvg">
+  <div class="minisvg" style="max-width:min(1120px,96vw); margin-top:1.6vh">
     <svg viewBox="0 0 820 240" role="img" aria-label="Day-0/1/2 핵심 흐름">
       <!-- Day 라벨 -->
-      <text x="110" y="45" text-anchor="end" fill="#9aa7b4" font-size="12" font-weight="700">Day-0</text>
-      <text x="110" y="59" text-anchor="end" fill="#7c8494" font-size="8.5">온보딩</text>
-      <text x="110" y="117" text-anchor="end" fill="#d8b25e" font-size="12" font-weight="700">Day-1</text>
-      <text x="110" y="131" text-anchor="end" fill="#a08b52" font-size="8.5">구성</text>
-      <text x="110" y="189" text-anchor="end" fill="#b0a4d6" font-size="12" font-weight="700">Day-2</text>
-      <text x="110" y="203" text-anchor="end" fill="#8279a0" font-size="8.5">운영</text>
+      <text x="112" y="45" text-anchor="end" fill="#9aa7b4" font-size="14.5" font-weight="700">Day-0</text>
+      <text x="112" y="60" text-anchor="end" fill="#7c8494" font-size="11">온보딩</text>
+      <text x="112" y="117" text-anchor="end" fill="#d8b25e" font-size="14.5" font-weight="700">Day-1</text>
+      <text x="112" y="132" text-anchor="end" fill="#a08b52" font-size="11">구성</text>
+      <text x="112" y="189" text-anchor="end" fill="#b0a4d6" font-size="14.5" font-weight="700">Day-2</text>
+      <text x="112" y="204" text-anchor="end" fill="#8279a0" font-size="11">운영</text>
 
       <!-- Day-0 행: 신규 장비 무인 온보딩 -->
       <rect x="124" y="24" width="150" height="48" rx="11" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
-      <text x="199" y="44" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">🔌 DHCP</text>
-      <text x="199" y="60" text-anchor="middle" fill="#9aa7b4" font-size="9">IP · 부팅정보</text>
+      <text x="199" y="44" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">🔌 DHCP</text>
+      <text x="199" y="61" text-anchor="middle" fill="#9aa7b4" font-size="11">IP · 부팅정보</text>
       <rect x="302" y="24" width="150" height="48" rx="11" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
-      <text x="377" y="44" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">📦 ZTP</text>
-      <text x="377" y="60" text-anchor="middle" fill="#9aa7b4" font-size="9">OS · 초기설정</text>
+      <text x="377" y="44" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">📦 ZTP</text>
+      <text x="377" y="61" text-anchor="middle" fill="#9aa7b4" font-size="11">OS · 초기설정</text>
       <rect x="480" y="24" width="150" height="48" rx="11" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
-      <text x="555" y="44" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">⚙ 초기 config</text>
-      <text x="555" y="60" text-anchor="middle" fill="#9aa7b4" font-size="9">Render 생성</text>
+      <text x="555" y="44" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">⚙ 초기 config</text>
+      <text x="555" y="61" text-anchor="middle" fill="#9aa7b4" font-size="11">Render 생성</text>
       <g stroke="#6a6252" stroke-width="2" stroke-linecap="round">
         <line x1="274" y1="48" x2="300" y2="48" marker-end="url(#ld-arrow-a)"/>
         <line x1="452" y1="48" x2="478" y2="48" marker-end="url(#ld-arrow-a)"/>
@@ -154,17 +187,17 @@
 
       <!-- Day-1 행: 핵심 파이프라인 -->
       <rect x="124" y="96" width="150" height="48" rx="11" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.6"/>
-      <text x="199" y="116" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">🗂 Nautobot</text>
-      <text x="199" y="132" text-anchor="middle" fill="#cfe9d4" font-size="9">SoT · intent</text>
+      <text x="199" y="116" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">🗂 Nautobot</text>
+      <text x="199" y="133" text-anchor="middle" fill="#cfe9d4" font-size="11">SoT · intent</text>
       <rect x="302" y="96" width="150" height="48" rx="11" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.6"/>
-      <text x="377" y="116" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">📡 NATS</text>
-      <text x="377" y="132" text-anchor="middle" fill="#e4d3a3" font-size="9">이벤트</text>
+      <text x="377" y="116" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">📡 NATS</text>
+      <text x="377" y="133" text-anchor="middle" fill="#e4d3a3" font-size="11">이벤트</text>
       <rect x="480" y="92" width="150" height="56" rx="12" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
-      <text x="555" y="116" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">⚙ Render</text>
-      <text x="555" y="132" text-anchor="middle" fill="#cfe9d4" font-size="9">번역</text>
+      <text x="555" y="116" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">⚙ Render</text>
+      <text x="555" y="133" text-anchor="middle" fill="#cfe9d4" font-size="11">번역</text>
       <rect x="658" y="96" width="150" height="48" rx="11" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.6"/>
-      <text x="733" y="116" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700">🗃 Config Store</text>
-      <text x="733" y="132" text-anchor="middle" fill="#bcd6f2" font-size="9">불변 저장</text>
+      <text x="733" y="116" text-anchor="middle" fill="#e6edf3" font-size="13.5" font-weight="700">🗃 Config Store</text>
+      <text x="733" y="133" text-anchor="middle" fill="#bcd6f2" font-size="11">불변 저장</text>
       <g stroke="#7ee787" stroke-width="2.4" stroke-linecap="round">
         <line x1="274" y1="120" x2="300" y2="120" marker-end="url(#ld-arrow-g)"/>
         <line x1="452" y1="120" x2="478" y2="120" marker-end="url(#ld-arrow-g)"/>
@@ -176,11 +209,11 @@
 
       <!-- Day-2 행: 승인 후 배포 -->
       <rect x="480" y="168" width="150" height="48" rx="11" fill="#2a2436" stroke="#b0a4d6" stroke-width="1.6" stroke-dasharray="5,4"/>
-      <text x="555" y="188" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">⏸ 승인 게이트</text>
-      <text x="555" y="204" text-anchor="middle" fill="#c9bfe0" font-size="9">Temporal · 사람</text>
+      <text x="555" y="188" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">⏸ 승인 게이트</text>
+      <text x="555" y="205" text-anchor="middle" fill="#c9bfe0" font-size="11">Temporal · 사람</text>
       <rect x="658" y="168" width="150" height="48" rx="11" fill="#2a2436" stroke="#b0a4d6" stroke-width="1.6" stroke-dasharray="5,4"/>
-      <text x="733" y="188" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">🖧 실제 장비</text>
-      <text x="733" y="204" text-anchor="middle" fill="#c9bfe0" font-size="9">deploy</text>
+      <text x="733" y="188" text-anchor="middle" fill="#e6edf3" font-size="14.5" font-weight="700">🖧 실제 장비</text>
+      <text x="733" y="205" text-anchor="middle" fill="#c9bfe0" font-size="11">deploy</text>
       <line x1="630" y1="192" x2="656" y2="192" stroke="#b0a4d6" stroke-width="1.8" stroke-dasharray="5,4" marker-end="url(#ld-arrow-v)"/>
     </svg>
   </div>
@@ -192,68 +225,31 @@
   </table>
 </section>
 
-<!-- 4 · 아키텍처 -->
-<section class="slide">
-  <div class="eyebrow"><span class="sn">03</span>아키텍처</div>
-  <h2 class="stitle">이벤트 기반 마이크로서비스</h2>
-  <p class="lead">기능별로 나뉜 여러 서비스가 <b>메시지 브로커(NATS)</b>를 통해 <b>이벤트</b>로 통신한다.</p>
-  <div class="minisvg">
-    <svg viewBox="0 0 820 250" role="img" aria-label="NVCM 아키텍처 4개 계층">
-      <!-- labels -->
-      <text x="110" y="41" text-anchor="end" fill="#9aa7b4" font-size="10.5" font-weight="700">클라이언트</text>
-      <text x="110" y="99" text-anchor="end" fill="#9aecb0" font-size="10.5" font-weight="700">서비스</text>
-      <text x="110" y="150" text-anchor="end" fill="#e4d3a3" font-size="10.5" font-weight="700">메시지 버스</text>
-      <text x="110" y="209" text-anchor="end" fill="#bcd6f2" font-size="10.5" font-weight="700">데이터</text>
-      <!-- Access -->
-      <rect x="124" y="14" width="676" height="42" rx="10" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
-      <text x="462" y="40" text-anchor="middle" fill="#e6edf3" font-size="13">UI &#160;·&#160; REST API &#160;·&#160; MCP 서버(AI 연동)</text>
-      <line x1="462" y1="56" x2="462" y2="70" stroke="#7ee787" stroke-width="2.2" marker-end="url(#ld-arrow-g)"/>
-      <!-- Services -->
-      <rect x="124" y="72" width="676" height="42" rx="10" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.5"/>
-      <text x="462" y="98" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">Render &#160;·&#160; ZTP &#160;·&#160; DHCP &#160;·&#160; Temporal &#160;<tspan fill="#9aecb0" font-weight="400" font-size="11">(마이크로서비스)</tspan></text>
-      <line x1="462" y1="114" x2="462" y2="128" stroke="#d8b25e" stroke-width="2.2" marker-end="url(#ld-arrow-a)"/>
-      <!-- Bus -->
-      <rect x="124" y="130" width="676" height="30" rx="9" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.5"/>
-      <text x="462" y="150" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">NATS — 이벤트 메시지 브로커 (서비스 간 비동기 통신)</text>
-      <line x1="462" y1="160" x2="462" y2="174" stroke="#58a6ff" stroke-width="2.2" marker-end="url(#ld-arrow-b)"/>
-      <!-- State -->
-      <rect x="124" y="176" width="676" height="56" rx="10" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.5"/>
-      <text x="462" y="200" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">Nautobot (Source of Truth) &#160;·&#160; Config Store (DB) &#160;·&#160; Redis (캐시)</text>
-      <text x="462" y="219" text-anchor="middle" fill="#bcd6f2" font-size="10.5">상태(state)는 전부 데이터 계층에 · 서비스 자체는 상태를 갖지 않음</text>
-    </svg>
-  </div>
-  <ul class="pts">
-    <li>서비스끼리 <b>직접 호출하지 않고</b> 이벤트로 통신 → <b>느슨한 결합</b>, 한 서비스 장애가 전체로 번지지 않음</li>
-    <li>모든 상태는 <b>DB·캐시</b>에 저장 · 진실의 근원은 <b>Nautobot(SoT)</b> 하나로 일원화</li>
-  </ul>
-  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/docs/overview/architecture.mdx</div>
-</section>
-
 <!-- 5 · 렌더 흐름 -->
 <section class="slide">
   <div class="eyebrow"><span class="sn">04</span>렌더 흐름</div>
   <h2 class="stitle">변경이 생기면 자동으로 다시 만든다</h2>
   <p class="lead">사람이 인벤토리를 고치면, 나머지는 <b>자동으로</b> 흘러간다.</p>
-  <div class="minisvg">
+  <div class="minisvg" style="max-width:min(1120px,96vw); margin-top:1.6vh">
     <svg viewBox="0 0 820 172" role="img" aria-label="렌더 흐름 4단계">
       <rect x="8" y="48" width="184" height="72" rx="13" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.6"/>
-      <text x="100" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">① 인벤토리 변경</text>
-      <text x="100" y="100" text-anchor="middle" fill="#cfe9d4" font-size="10.5">Nautobot 수정</text>
+      <text x="100" y="80" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">① 인벤토리 변경</text>
+      <text x="100" y="101" text-anchor="middle" fill="#cfe9d4" font-size="11.5">Nautobot 수정</text>
       <rect x="216" y="48" width="184" height="72" rx="13" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.6"/>
-      <text x="308" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">② 변경 알림</text>
-      <text x="308" y="100" text-anchor="middle" fill="#e4d3a3" font-size="10.5">이벤트 발생</text>
+      <text x="308" y="80" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">② 변경 알림</text>
+      <text x="308" y="101" text-anchor="middle" fill="#e4d3a3" font-size="11.5">이벤트 발생</text>
       <rect x="424" y="44" width="184" height="80" rx="14" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
-      <text x="516" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">③ 설정 다시 생성</text>
-      <text x="516" y="100" text-anchor="middle" fill="#cfe9d4" font-size="10.5">Render (템플릿)</text>
+      <text x="516" y="80" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">③ 설정 다시 생성</text>
+      <text x="516" y="101" text-anchor="middle" fill="#cfe9d4" font-size="11.5">Render (템플릿)</text>
       <rect x="632" y="48" width="180" height="72" rx="13" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.6"/>
-      <text x="722" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">④ 새 버전 저장</text>
-      <text x="722" y="100" text-anchor="middle" fill="#bcd6f2" font-size="10.5">Config Store</text>
+      <text x="722" y="80" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">④ 새 버전 저장</text>
+      <text x="722" y="101" text-anchor="middle" fill="#bcd6f2" font-size="11.5">Config Store</text>
       <g stroke="#7ee787" stroke-width="2.4" stroke-linecap="round">
         <line x1="192" y1="84" x2="213" y2="84" marker-end="url(#ld-arrow-g)"/>
         <line x1="400" y1="84" x2="421" y2="84" marker-end="url(#ld-arrow-g)"/>
         <line x1="608" y1="84" x2="629" y2="84" marker-end="url(#ld-arrow-g)"/>
       </g>
-      <text x="410" y="150" text-anchor="middle" fill="#9aa7b4" font-size="10.5">변경이 있을 때만 동작 · 실제 장비 반영은 이후 '승인'을 거쳐 별도로</text>
+      <text x="410" y="152" text-anchor="middle" fill="#9aa7b4" font-size="11.5">변경이 있을 때만 동작 · 실제 장비 반영은 이후 '승인'을 거쳐 별도로</text>
     </svg>
   </div>
   <ul class="pts">
@@ -313,9 +309,46 @@
   <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/README.md · /docs/temporal · /docs/overview/mcp.mdx</div>
 </section>
 
+<!-- 6b · 아키텍처 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">07</span>아키텍처</div>
+  <h2 class="stitle">이벤트 기반 마이크로서비스</h2>
+  <p class="lead">기능별로 나뉜 여러 서비스가 <b>메시지 브로커(NATS)</b>를 통해 <b>이벤트</b>로 통신한다.</p>
+  <div class="minisvg">
+    <svg viewBox="0 0 820 250" role="img" aria-label="NVCM 아키텍처 4개 계층">
+      <!-- labels -->
+      <text x="112" y="41" text-anchor="end" fill="#9aa7b4" font-size="13" font-weight="700">클라이언트</text>
+      <text x="112" y="99" text-anchor="end" fill="#9aecb0" font-size="13" font-weight="700">서비스</text>
+      <text x="112" y="150" text-anchor="end" fill="#e4d3a3" font-size="13" font-weight="700">메시지 버스</text>
+      <text x="112" y="209" text-anchor="end" fill="#bcd6f2" font-size="13" font-weight="700">데이터</text>
+      <!-- Access -->
+      <rect x="124" y="14" width="676" height="42" rx="10" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
+      <text x="462" y="41" text-anchor="middle" fill="#e6edf3" font-size="16">UI &#160;·&#160; REST API &#160;·&#160; MCP 서버(AI 연동)</text>
+      <line x1="462" y1="56" x2="462" y2="70" stroke="#7ee787" stroke-width="2.2" marker-end="url(#ld-arrow-g)"/>
+      <!-- Services -->
+      <rect x="124" y="72" width="676" height="42" rx="10" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.5"/>
+      <text x="462" y="99" text-anchor="middle" fill="#e6edf3" font-size="16" font-weight="700">Render &#160;·&#160; ZTP &#160;·&#160; DHCP &#160;·&#160; Temporal &#160;<tspan fill="#9aecb0" font-weight="400" font-size="13">(마이크로서비스)</tspan></text>
+      <line x1="462" y1="114" x2="462" y2="128" stroke="#d8b25e" stroke-width="2.2" marker-end="url(#ld-arrow-a)"/>
+      <!-- Bus -->
+      <rect x="124" y="130" width="676" height="30" rx="9" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.5"/>
+      <text x="462" y="151" text-anchor="middle" fill="#e6edf3" font-size="15" font-weight="700">NATS — 이벤트 메시지 브로커 (서비스 간 비동기 통신)</text>
+      <line x1="462" y1="160" x2="462" y2="174" stroke="#58a6ff" stroke-width="2.2" marker-end="url(#ld-arrow-b)"/>
+      <!-- State -->
+      <rect x="124" y="176" width="676" height="56" rx="10" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="462" y="201" text-anchor="middle" fill="#e6edf3" font-size="16" font-weight="700">Nautobot (Source of Truth) &#160;·&#160; Config Store (DB) &#160;·&#160; Redis (캐시)</text>
+      <text x="462" y="221" text-anchor="middle" fill="#bcd6f2" font-size="12.5">상태(state)는 전부 데이터 계층에 · 서비스 자체는 상태를 갖지 않음</text>
+    </svg>
+  </div>
+  <ul class="pts">
+    <li>서비스끼리 <b>직접 호출하지 않고</b> 이벤트로 통신 → <b>느슨한 결합</b>, 한 서비스 장애가 전체로 번지지 않음</li>
+    <li>모든 상태는 <b>DB·캐시</b>에 저장 · 진실의 근원은 <b>Nautobot(SoT)</b> 하나로 일원화</li>
+  </ul>
+  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/docs/overview/architecture.mdx</div>
+</section>
+
 <!-- 7 · Config Store -->
 <section class="slide">
-  <div class="eyebrow"><span class="sn">07</span>핵심 설계</div>
+  <div class="eyebrow"><span class="sn">08</span>핵심 설계</div>
   <h2 class="stitle">Config Store — 불변 버전</h2>
   <p class="lead">렌더 결과를 <b>절대 덮어쓰지 않고</b> 새 버전으로만 쌓는다.</p>
   <ul class="pts">
@@ -326,40 +359,6 @@
   </ul>
   <div class="kx"><b>감사·롤백·재현을 기본 확보</b> · aipub 차용 후보 ①.</div>
   <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/docs/config-store/config-store-architecture.mdx</div>
-</section>
-
-<!-- 8b · 레이어 포지셔닝 -->
-<section class="slide">
-  <div class="eyebrow">레이어 · 포지셔닝</div>
-  <h2 class="stitle">AI 팩토리 속 NVCM의 위치</h2>
-  <p class="lead">NVCM은 <b>네트워크 스위치 구성</b> 레이어 · AIPub은 그 위 <b>k8s 플랫폼</b> 레이어 — <b>서로 다른 층</b>.</p>
-  <div class="minisvg">
-    <svg viewBox="0 0 820 290" role="img" aria-label="AI 팩토리 레이어 스택과 NVCM 위치">
-      <!-- ⑤ 워크로드 -->
-      <rect x="120" y="20" width="584" height="44" rx="9" fill="#2b2620" stroke="#4a4436" stroke-width="1.3"/>
-      <text x="412" y="47" text-anchor="middle" fill="#e6edf3" font-size="12.5">⑤ ML 워크로드 — 학습 · 추론 Job</text>
-      <!-- ④ AIPub -->
-      <rect x="120" y="71" width="584" height="44" rx="9" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="2"/>
-      <text x="412" y="98" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">④ k8s 플랫폼 — AIPub · Project · Quota · RBAC</text>
-      <text x="712" y="99" fill="#58a6ff" font-size="11" font-weight="700">◀ 우리(AIPub)</text>
-      <!-- ③ k8s -->
-      <rect x="120" y="122" width="584" height="44" rx="9" fill="#2b2620" stroke="#4a4436" stroke-width="1.3"/>
-      <text x="412" y="149" text-anchor="middle" fill="#e6edf3" font-size="12.5">③ k8s 클러스터 — 노드 · CNI</text>
-      <!-- ② NVCM -->
-      <rect x="120" y="173" width="584" height="44" rx="9" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
-      <text x="412" y="200" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">② 네트워크 스위치 구성 — OS · config 생성/버전/배포</text>
-      <text x="712" y="201" fill="#7ee787" font-size="11" font-weight="700">◀ NVCM</text>
-      <!-- ① 물리 -->
-      <rect x="120" y="224" width="584" height="44" rx="9" fill="#241f18" stroke="#4a4436" stroke-width="1.3"/>
-      <text x="412" y="245" text-anchor="middle" fill="#cfc7b6" font-size="11.5">① 물리 인프라 — GPU 서버 · 스위치 HW · 케이블</text>
-      <text x="412" y="260" text-anchor="middle" fill="#8a8296" font-size="9.5">fabric 제어(NICo / DPF · DPU)</text>
-    </svg>
-  </div>
-  <ul class="pts">
-    <li><b>NVCM 진입점 = ②</b> — 스위치 HW·케이블은 이미 있는 상태(①)에서 <b>그 스위치의 OS·config를 자동화</b></li>
-    <li><b>Day-0</b>는 AI 팩토리 전체가 아니라 <b>스위치가 처음 부팅되는 시점</b> <span class="m">(레이어마다 각자의 Day-0가 있음)</span></li>
-    <li><b>NVCM ≠ AIPub</b> — 층이 다름(②↔④) · 직접 얽히지 않음 → 제품이 아닌 <b>패턴만 차용</b></li>
-  </ul>
 </section>
 
 <!-- 9 · 동형성 -->
