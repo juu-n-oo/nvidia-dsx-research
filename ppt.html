@@ -1,0 +1,467 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA Config Manager (NVCM) 구조 & aipub 적용 — 발표</title>
+<style>
+  :root{
+    --bg:#faf8f3; --bg2:#f4efe5; --panel:#fffdf8; --panel2:#f1ebdf; --border:#e6ddcc;
+    --text:#33302b; --body:#4a443c; --muted:#938a7b;
+    --accent:#c2613f; --accent-d:#a44d2f; --accent-soft:#f4e2d8;
+    --olive:#6f7a4a; --amber:#c2913a; --violet:#7a6f9e;
+    --serif:"Iowan Old Style","Palatino Linotype","Book Antiqua",Georgia,"Nanum Myeongjo","바탕",serif;
+    --sans:-apple-system,"Segoe UI","Malgun Gothic","맑은 고딕",Roboto,sans-serif;
+    --mono:"JetBrains Mono","Cascadia Code","Consolas",monospace;
+  }
+  body.dark{
+    --bg:#16130e; --bg2:#1c1812; --panel:#201b14; --panel2:#2a241b; --border:#3a3328;
+    --text:#f1eadd; --body:#d2c9b8; --muted:#9a9080;
+    --accent:#e08a63; --accent-d:#e9a07f; --accent-soft:#3a2a21;
+    --olive:#a3b06f; --amber:#d8b25e; --violet:#b0a4d6;
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  html,body{height:100%}
+  body{background:var(--bg); color:var(--body); font-family:var(--sans); overflow:hidden; -webkit-font-smoothing:antialiased}
+  .slide{position:fixed; inset:0; display:none; flex-direction:column; justify-content:center;
+    padding:7vh 9vw 12vh; animation:fade .35s ease}
+  .slide.active{display:flex}
+  @keyframes fade{from{opacity:0; transform:translateY(12px)} to{opacity:1; transform:none}}
+  .eyebrow{font-size:clamp(12px,1.5vw,16px); letter-spacing:3px; text-transform:uppercase; color:var(--accent); font-weight:700; margin-bottom:2.4vh}
+  .eyebrow .sn{color:var(--muted); margin-right:10px}
+  h1.title{font-family:var(--serif); font-weight:600; color:var(--text); letter-spacing:-.015em; line-height:1.08;
+    font-size:clamp(30px,5.4vw,68px); margin-bottom:2.6vh}
+  h2.stitle{font-family:var(--serif); font-weight:600; color:var(--text); letter-spacing:-.01em; line-height:1.12;
+    font-size:clamp(26px,4.4vw,52px); margin-bottom:3vh}
+  .sub{color:var(--muted); font-size:clamp(15px,2vw,24px); line-height:1.6; max-width:58ch}
+  ul.pts{list-style:none; max-width:74ch}
+  ul.pts li{position:relative; padding-left:2.4vw; margin:1.6vh 0; font-size:clamp(15px,2vw,23px); line-height:1.5; color:var(--body)}
+  ul.pts li:before{content:"›"; position:absolute; left:0; color:var(--accent); font-weight:700}
+  ul.pts li b, .body-strong{color:var(--text); font-weight:650}
+  ul.pts li .m{color:var(--muted); font-size:.86em}
+  code{font-family:var(--mono); background:var(--panel2); border:1px solid var(--border); border-radius:5px; padding:1px 7px; font-size:.82em; color:var(--accent-d)}
+  .lead{font-size:clamp(16px,2.2vw,26px); color:var(--body); line-height:1.5; max-width:62ch; margin-bottom:1vh}
+  .lead b{color:var(--text)}
+  .chips{display:flex; flex-wrap:wrap; gap:1.1vw; margin-top:2.2vh}
+  .chip{border:1px solid var(--border); background:var(--panel); border-radius:14px; padding:1.4vh 1.5vw; box-shadow:0 4px 16px rgba(60,40,20,.06); max-width:19ch}
+  .chip .cn{font-size:clamp(11px,1.2vw,14px); color:var(--accent); font-weight:700; letter-spacing:1px}
+  .chip h3{font-family:var(--serif); font-size:clamp(15px,1.7vw,21px); color:var(--text); margin:.4vh 0; font-weight:600}
+  .chip p{font-size:clamp(12px,1.3vw,15px); color:var(--muted); line-height:1.4}
+  .big3{display:grid; grid-template-columns:1fr; gap:1.6vh; max-width:76ch}
+  .big3 .row{display:flex; gap:1.4vw; align-items:flex-start; border-left:3px solid var(--accent); background:var(--panel); border:1px solid var(--border); border-left-width:3px; border-radius:12px; padding:1.7vh 1.8vw}
+  .big3 .row .no{font-family:var(--serif); font-size:clamp(22px,3vw,38px); color:var(--accent); font-weight:700; line-height:1; flex:0 0 auto}
+  .big3 .row .tx{font-size:clamp(14px,1.7vw,20px); line-height:1.45}
+  .big3 .row .tx b{color:var(--text)}
+  .big3 .row .tx .m{color:var(--muted); font-size:.85em}
+  table{border-collapse:collapse; margin-top:2.2vh; font-size:clamp(13px,1.5vw,18px); max-width:84ch}
+  th,td{border:1px solid var(--border); padding:1.1vh 1.3vw; text-align:left; vertical-align:top}
+  th{background:var(--panel2); color:var(--text); font-family:var(--serif); font-weight:600}
+  td b{color:var(--text)}
+  .kx{margin-top:2.8vh; border-left:3px solid var(--accent); background:var(--accent-soft); border-radius:12px; padding:1.7vh 2vw; font-size:clamp(14px,1.7vw,21px); color:var(--body); max-width:76ch}
+  .kx b{color:var(--accent-d)}
+  .title-meta{margin-top:auto; color:var(--muted); font-size:clamp(11px,1.3vw,15px); border-top:1px solid var(--border); padding-top:2vh}
+  .src{font-family:var(--mono); font-size:clamp(9.5px,1.05vw,12px); color:var(--muted); margin-top:2.2vh; letter-spacing:.02em}
+  .src b{color:var(--body); font-weight:600}
+  svg text{font-family:var(--sans)}
+  .minisvg{margin-top:2.4vh; max-width:min(900px,88vw)}
+  .minisvg svg{width:100%; height:auto; background:#24201a; border:1px solid #3a342c; border-radius:14px; padding:2vh 2vw; box-shadow:0 8px 28px rgba(60,40,20,.12)}
+  /* nav */
+  .navbar{position:fixed; left:0; right:0; bottom:0; height:8vh; min-height:44px; display:flex; align-items:center; gap:16px; padding:0 3vw; z-index:40; pointer-events:none}
+  .prog{position:fixed; left:0; top:0; height:4px; background:var(--accent); width:0; z-index:60; transition:width .3s}
+  .counter{font-family:var(--mono); font-size:13px; color:var(--muted); pointer-events:auto}
+  .hint{font-size:12px; color:var(--muted); margin-left:auto; pointer-events:auto}
+  .toolbar{position:fixed; top:16px; right:18px; z-index:50; display:flex; gap:8px}
+  .toolbar button{background:var(--panel); color:var(--text); border:1px solid var(--border); border-radius:22px; padding:7px 14px; font-size:12.5px; font-family:var(--sans); cursor:pointer; box-shadow:0 4px 14px rgba(60,40,20,.10)}
+  .toolbar button:hover{border-color:var(--accent); color:var(--accent)}
+  .clickzone{position:fixed; top:0; bottom:8vh; width:22vw; z-index:30; cursor:pointer}
+  .clickzone.prev{left:0} .clickzone.next{right:0}
+  @page{size:landscape; margin:10mm}
+  @media print{
+    body{overflow:visible}
+    .toolbar,.navbar,.prog,.clickzone{display:none !important}
+    .slide{position:relative; inset:auto; display:flex !important; height:96vh; page-break-after:always; animation:none; border-bottom:1px solid #ccc}
+  }
+</style>
+</head>
+<body>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+  <filter id="ld-shadow" x="-20%" y="-25%" width="140%" height="165%"><feDropShadow dx="0" dy="3" stdDeviation="4" flood-color="#000" flood-opacity="0.45"/></filter>
+  <filter id="ld-glow" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  <linearGradient id="ld-blue" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1f3f60"/><stop offset="1" stop-color="#11233a"/></linearGradient>
+  <linearGradient id="ld-green" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#194433"/><stop offset="1" stop-color="#0e2519"/></linearGradient>
+  <linearGradient id="ld-amber" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#43381a"/><stop offset="1" stop-color="#241c0d"/></linearGradient>
+  <linearGradient id="ld-purple" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#312651"/><stop offset="1" stop-color="#1a1530"/></linearGradient>
+  <marker id="ld-arrow-g" markerWidth="12" markerHeight="12" refX="8.5" refY="5" orient="auto"><path d="M0,0.5 L10,5 L0,9.5 L2.6,5 z" fill="#7ee787"/></marker>
+  <marker id="ld-arrow-b" markerWidth="12" markerHeight="12" refX="8.5" refY="5" orient="auto"><path d="M0,0.5 L10,5 L0,9.5 L2.6,5 z" fill="#58a6ff"/></marker>
+  <marker id="ld-arrow-a" markerWidth="12" markerHeight="12" refX="8.5" refY="5" orient="auto"><path d="M0,0.5 L10,5 L0,9.5 L2.6,5 z" fill="#d8b25e"/></marker>
+  <marker id="ld-arrow-v" markerWidth="12" markerHeight="12" refX="8.5" refY="5" orient="auto"><path d="M0,0.5 L10,5 L0,9.5 L2.6,5 z" fill="#b0a4d6"/></marker>
+</defs></svg>
+
+<div class="prog" id="prog"></div>
+
+<!-- 1 · 표지 -->
+<section class="slide">
+  <div class="eyebrow">NVCM 구조 요약 발표</div>
+  <h1 class="title">NVIDIA Config Manager<br>구조 &amp; aipub 적용</h1>
+  <p class="sub">네트워크 SoT(Nautobot) → 이벤트 렌더 → 불변 저장 → 승인·AI 연동 → <b class="body-strong">aipub 적용 방안</b></p>
+  <div class="title-meta">출처 <code>https://github.com/NVIDIA/nv-config-manager</code> · Developer Preview · ← → 로 이동 · 📄 PDF</div>
+</section>
+
+<!-- 2 · 개요 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">01</span>개요</div>
+  <h2 class="stitle">NVCM이란 <span style="font-size:.38em; font-weight:400; color:var(--muted); letter-spacing:.02em;">NVIDIA Config Manager</span></h2>
+  <p class="lead">대규모 데이터센터 <b>네트워크</b>를 위한 오픈소스 자동화·구성 관리 플랫폼. k8s 위 Helm으로 배포되는 <b>이벤트 기반 마이크로서비스</b>.</p>
+  <ul class="pts">
+    <li><b>단일 진실 공급원</b> — Nautobot에 디바이스·IP·케이블·인벤토리 집약</li>
+    <li><b>선언 → 자동 렌더</b> — SoT가 바뀌면 이벤트 발생, 템플릿으로 config 자동 생성 <span class="m">(수작업 CLI 제거)</span></li>
+    <li><b>Zero-Touch 프로비저닝</b> — DHCP→ZTP로 부팅·OS·설정 무인 전달</li>
+    <li><b>승인 워크플로 + 불변 이력</b> — Temporal 승인 게이트 · 버전 diff·롤백</li>
+  </ul>
+  <div class="kx">현재 상태 <b>Developer Preview</b> — 프로덕션 비권장 · aipub은 제품 이식이 아닌 <b>패턴 차용</b> 관점.</div>
+</section>
+
+<!-- 3 · 핵심 패턴 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">02</span>핵심 패턴</div>
+  <h2 class="stitle">핵심 흐름 — Day-0 / 1 / 2</h2>
+  <p class="lead">중심은 <b>Day-1 파이프라인</b>(SoT→이벤트→렌더→저장) · 앞뒤로 <b>Day-0 온보딩</b>과 <b>Day-2 배포</b>가 이어진다.</p>
+  <div class="minisvg">
+    <svg viewBox="0 0 820 240" role="img" aria-label="Day-0/1/2 핵심 흐름">
+      <!-- Day 라벨 -->
+      <text x="110" y="45" text-anchor="end" fill="#9aa7b4" font-size="12" font-weight="700">Day-0</text>
+      <text x="110" y="59" text-anchor="end" fill="#7c8494" font-size="8.5">온보딩</text>
+      <text x="110" y="117" text-anchor="end" fill="#d8b25e" font-size="12" font-weight="700">Day-1</text>
+      <text x="110" y="131" text-anchor="end" fill="#a08b52" font-size="8.5">구성</text>
+      <text x="110" y="189" text-anchor="end" fill="#b0a4d6" font-size="12" font-weight="700">Day-2</text>
+      <text x="110" y="203" text-anchor="end" fill="#8279a0" font-size="8.5">운영</text>
+
+      <!-- Day-0 행: 신규 장비 무인 온보딩 -->
+      <rect x="124" y="24" width="150" height="48" rx="11" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
+      <text x="199" y="44" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">🔌 DHCP</text>
+      <text x="199" y="60" text-anchor="middle" fill="#9aa7b4" font-size="9">IP · 부팅정보</text>
+      <rect x="302" y="24" width="150" height="48" rx="11" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
+      <text x="377" y="44" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">📦 ZTP</text>
+      <text x="377" y="60" text-anchor="middle" fill="#9aa7b4" font-size="9">OS · 초기설정</text>
+      <rect x="480" y="24" width="150" height="48" rx="11" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
+      <text x="555" y="44" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">⚙ 초기 config</text>
+      <text x="555" y="60" text-anchor="middle" fill="#9aa7b4" font-size="9">Render 생성</text>
+      <g stroke="#6a6252" stroke-width="2" stroke-linecap="round">
+        <line x1="274" y1="48" x2="300" y2="48" marker-end="url(#ld-arrow-a)"/>
+        <line x1="452" y1="48" x2="478" y2="48" marker-end="url(#ld-arrow-a)"/>
+      </g>
+
+      <!-- Day-1 행: 핵심 파이프라인 -->
+      <rect x="124" y="96" width="150" height="48" rx="11" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.6"/>
+      <text x="199" y="116" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">🗂 Nautobot</text>
+      <text x="199" y="132" text-anchor="middle" fill="#cfe9d4" font-size="9">SoT · intent</text>
+      <rect x="302" y="96" width="150" height="48" rx="11" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.6"/>
+      <text x="377" y="116" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">📡 NATS</text>
+      <text x="377" y="132" text-anchor="middle" fill="#e4d3a3" font-size="9">이벤트</text>
+      <rect x="480" y="92" width="150" height="56" rx="12" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
+      <text x="555" y="116" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">⚙ Render</text>
+      <text x="555" y="132" text-anchor="middle" fill="#cfe9d4" font-size="9">번역</text>
+      <rect x="658" y="96" width="150" height="48" rx="11" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.6"/>
+      <text x="733" y="116" text-anchor="middle" fill="#e6edf3" font-size="12" font-weight="700">🗃 Config Store</text>
+      <text x="733" y="132" text-anchor="middle" fill="#bcd6f2" font-size="9">불변 저장</text>
+      <g stroke="#7ee787" stroke-width="2.4" stroke-linecap="round">
+        <line x1="274" y1="120" x2="300" y2="120" marker-end="url(#ld-arrow-g)"/>
+        <line x1="452" y1="120" x2="478" y2="120" marker-end="url(#ld-arrow-g)"/>
+        <line x1="630" y1="120" x2="656" y2="120" marker-end="url(#ld-arrow-g)"/>
+      </g>
+
+      <!-- Config Store → Day-2 (점선, 승인 필요) -->
+      <path d="M733,144 V156 H555 V168" fill="none" stroke="#b0a4d6" stroke-width="1.8" stroke-dasharray="5,4" marker-end="url(#ld-arrow-v)"/>
+
+      <!-- Day-2 행: 승인 후 배포 -->
+      <rect x="480" y="168" width="150" height="48" rx="11" fill="#2a2436" stroke="#b0a4d6" stroke-width="1.6" stroke-dasharray="5,4"/>
+      <text x="555" y="188" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">⏸ 승인 게이트</text>
+      <text x="555" y="204" text-anchor="middle" fill="#c9bfe0" font-size="9">Temporal · 사람</text>
+      <rect x="658" y="168" width="150" height="48" rx="11" fill="#2a2436" stroke="#b0a4d6" stroke-width="1.6" stroke-dasharray="5,4"/>
+      <text x="733" y="188" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">🖧 실제 장비</text>
+      <text x="733" y="204" text-anchor="middle" fill="#c9bfe0" font-size="9">deploy</text>
+      <line x1="630" y1="192" x2="656" y2="192" stroke="#b0a4d6" stroke-width="1.8" stroke-dasharray="5,4" marker-end="url(#ld-arrow-v)"/>
+    </svg>
+  </div>
+  <table>
+    <tr><th>단계</th><th>담당 서비스</th><th>내용</th></tr>
+    <tr><td><b>Day-0</b> Bootstrap</td><td>DHCP · ZTP · Render</td><td>신규 장비 <b>무인 온보딩</b> — DHCP→ZTP→초기 config (IP·OS·설정)</td></tr>
+    <tr><td><b>Day-1</b> Configure <span class="m">(핵심 패턴)</span></td><td>Nautobot · Render · Config Store</td><td>intent 선언(SoT) → 이벤트 → 렌더 → <b>intended 불변 저장</b></td></tr>
+    <tr><td><b>Day-2</b> Operate</td><td>Temporal</td><td>저장된 설정을 <b>승인 거쳐 실제 장비 반영</b>(자동 아님) · 백업·검증·드리프트·롤백</td></tr>
+  </table>
+</section>
+
+<!-- 4 · 아키텍처 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">03</span>아키텍처</div>
+  <h2 class="stitle">이벤트 기반 마이크로서비스</h2>
+  <p class="lead">기능별로 나뉜 여러 서비스가 <b>메시지 브로커(NATS)</b>를 통해 <b>이벤트</b>로 통신한다.</p>
+  <div class="minisvg">
+    <svg viewBox="0 0 820 250" role="img" aria-label="NVCM 아키텍처 4개 계층">
+      <!-- labels -->
+      <text x="110" y="41" text-anchor="end" fill="#9aa7b4" font-size="10.5" font-weight="700">클라이언트</text>
+      <text x="110" y="99" text-anchor="end" fill="#9aecb0" font-size="10.5" font-weight="700">서비스</text>
+      <text x="110" y="150" text-anchor="end" fill="#e4d3a3" font-size="10.5" font-weight="700">메시지 버스</text>
+      <text x="110" y="209" text-anchor="end" fill="#bcd6f2" font-size="10.5" font-weight="700">데이터</text>
+      <!-- Access -->
+      <rect x="124" y="14" width="676" height="42" rx="10" fill="#2b2620" stroke="#6a6252" stroke-width="1.3"/>
+      <text x="462" y="40" text-anchor="middle" fill="#e6edf3" font-size="13">UI &#160;·&#160; REST API &#160;·&#160; MCP 서버(AI 연동)</text>
+      <line x1="462" y1="56" x2="462" y2="70" stroke="#7ee787" stroke-width="2.2" marker-end="url(#ld-arrow-g)"/>
+      <!-- Services -->
+      <rect x="124" y="72" width="676" height="42" rx="10" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.5"/>
+      <text x="462" y="98" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">Render &#160;·&#160; ZTP &#160;·&#160; DHCP &#160;·&#160; Temporal &#160;<tspan fill="#9aecb0" font-weight="400" font-size="11">(마이크로서비스)</tspan></text>
+      <line x1="462" y1="114" x2="462" y2="128" stroke="#d8b25e" stroke-width="2.2" marker-end="url(#ld-arrow-a)"/>
+      <!-- Bus -->
+      <rect x="124" y="130" width="676" height="30" rx="9" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.5"/>
+      <text x="462" y="150" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">NATS — 이벤트 메시지 브로커 (서비스 간 비동기 통신)</text>
+      <line x1="462" y1="160" x2="462" y2="174" stroke="#58a6ff" stroke-width="2.2" marker-end="url(#ld-arrow-b)"/>
+      <!-- State -->
+      <rect x="124" y="176" width="676" height="56" rx="10" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.5"/>
+      <text x="462" y="200" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">Nautobot (Source of Truth) &#160;·&#160; Config Store (DB) &#160;·&#160; Redis (캐시)</text>
+      <text x="462" y="219" text-anchor="middle" fill="#bcd6f2" font-size="10.5">상태(state)는 전부 데이터 계층에 · 서비스 자체는 상태를 갖지 않음</text>
+    </svg>
+  </div>
+  <ul class="pts">
+    <li>서비스끼리 <b>직접 호출하지 않고</b> 이벤트로 통신 → <b>느슨한 결합</b>, 한 서비스 장애가 전체로 번지지 않음</li>
+    <li>모든 상태는 <b>DB·캐시</b>에 저장 · 진실의 근원은 <b>Nautobot(SoT)</b> 하나로 일원화</li>
+  </ul>
+  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/docs/overview/architecture.mdx</div>
+</section>
+
+<!-- 5 · 렌더 흐름 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">04</span>렌더 흐름</div>
+  <h2 class="stitle">변경이 생기면 자동으로 다시 만든다</h2>
+  <p class="lead">사람이 인벤토리를 고치면, 나머지는 <b>자동으로</b> 흘러간다.</p>
+  <div class="minisvg">
+    <svg viewBox="0 0 820 172" role="img" aria-label="렌더 흐름 4단계">
+      <rect x="8" y="48" width="184" height="72" rx="13" fill="url(#ld-green)" stroke="#7ee787" stroke-width="1.6"/>
+      <text x="100" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">① 인벤토리 변경</text>
+      <text x="100" y="100" text-anchor="middle" fill="#cfe9d4" font-size="10.5">Nautobot 수정</text>
+      <rect x="216" y="48" width="184" height="72" rx="13" fill="url(#ld-amber)" stroke="#d8b25e" stroke-width="1.6"/>
+      <text x="308" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">② 변경 알림</text>
+      <text x="308" y="100" text-anchor="middle" fill="#e4d3a3" font-size="10.5">이벤트 발생</text>
+      <rect x="424" y="44" width="184" height="80" rx="14" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
+      <text x="516" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">③ 설정 다시 생성</text>
+      <text x="516" y="100" text-anchor="middle" fill="#cfe9d4" font-size="10.5">Render (템플릿)</text>
+      <rect x="632" y="48" width="180" height="72" rx="13" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="1.6"/>
+      <text x="722" y="80" text-anchor="middle" fill="#e6edf3" font-size="13" font-weight="700">④ 새 버전 저장</text>
+      <text x="722" y="100" text-anchor="middle" fill="#bcd6f2" font-size="10.5">Config Store</text>
+      <g stroke="#7ee787" stroke-width="2.4" stroke-linecap="round">
+        <line x1="192" y1="84" x2="213" y2="84" marker-end="url(#ld-arrow-g)"/>
+        <line x1="400" y1="84" x2="421" y2="84" marker-end="url(#ld-arrow-g)"/>
+        <line x1="608" y1="84" x2="629" y2="84" marker-end="url(#ld-arrow-g)"/>
+      </g>
+      <text x="410" y="150" text-anchor="middle" fill="#9aa7b4" font-size="10.5">변경이 있을 때만 동작 · 실제 장비 반영은 이후 '승인'을 거쳐 별도로</text>
+    </svg>
+  </div>
+  <ul class="pts">
+    <li>인벤토리를 바꾸면 → <b>관련 장비 설정만</b> 다시 만들어져 → 새 버전으로 저장</li>
+    <li><b>변경이 있을 때만 반응</b>(평소엔 대기) · 동시에 여러 변경이 와도 꼬이지 않게 순서 보장</li>
+  </ul>
+  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/docs/render/render-service.mdx</div>
+</section>
+
+<!-- 5b · intent → 설정 예시 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">05</span>예시로 보기</div>
+  <h2 class="stitle">intent가 실제 설정이 되기까지</h2>
+  <p class="lead">사람은 <b>intent</b>만 적고, Render가 <b>장비 설정 텍스트</b>로 번역한다.</p>
+  <div style="display:flex; gap:1.6vw; align-items:stretch; margin-top:2vh; max-width:92ch;">
+    <div style="flex:1; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.6vh 1.4vw;">
+      <div style="font-family:var(--mono); font-size:clamp(11px,1.2vw,14px); color:var(--olive); font-weight:700; margin-bottom:1.1vh;">Nautobot · intent(데이터)</div>
+      <div style="font-family:var(--mono); font-size:clamp(11px,1.3vw,15px); line-height:1.65; color:var(--body); white-space:pre;">장비: leaf-01
+역할: border-leaf
+포트 swp1
+  IP       = 10.0.0.1/24
+  연결 대상 = 서버-A</div>
+      <div style="color:var(--muted); font-size:clamp(11px,1.15vw,13.5px); margin-top:1.2vh;">사람이 "이 포트에 이 IP" 만 선언<br>(항목을 채우는 <b>표 입력</b> 형태)</div>
+    </div>
+    <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; min-width:9ch; color:var(--accent);">
+      <div style="font-size:clamp(22px,2.8vw,36px); font-weight:700;">→</div>
+      <div style="font-family:var(--mono); font-size:clamp(11px,1.2vw,14px); font-weight:700;">Render</div>
+      <div style="color:var(--muted); font-size:clamp(10px,1vw,12px);">템플릿 번역</div>
+    </div>
+    <div style="flex:1; background:var(--panel); border:1px solid var(--border); border-radius:12px; padding:1.6vh 1.4vw;">
+      <div style="font-family:var(--mono); font-size:clamp(11px,1.2vw,14px); color:var(--accent-d); font-weight:700; margin-bottom:1.1vh;">Render 결과 · 실제 설정 텍스트</div>
+      <div style="font-family:var(--mono); font-size:clamp(11px,1.3vw,15px); line-height:1.65; color:var(--body); white-space:pre;">interface swp1
+  ip address 10.0.0.1/24
+  alias 서버-A
+  no shutdown</div>
+      <div style="color:var(--muted); font-size:clamp(11px,1.15vw,13.5px); margin-top:1.2vh;">장비가 그대로 알아듣는 문법<br>(사람이 손으로 안 씀)</div>
+    </div>
+  </div>
+  <div class="kx">같은 intent라도 <b>장비 종류·역할별 템플릿</b>이 각기 다른 설정 텍스트로 찍어낸다 — 문법 변환은 전부 Render 몫.</div>
+  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/tree/main/components/network-templates</div>
+</section>
+
+<!-- 6 · 서비스 -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">06</span>서비스</div>
+  <h2 class="stitle">7개 서비스 + MCP</h2>
+  <table>
+    <tr><th>서비스</th><th>역할</th></tr>
+    <tr><td><b>Nautobot</b></td><td>Network Source of Truth — 인벤토리·IP·케이블 + 변경 이벤트 발행</td></tr>
+    <tr><td><b>Render</b></td><td>이벤트 소비 → Nautobot 데이터 + Jinja2 템플릿으로 config 생성</td></tr>
+    <tr><td><b>Config Store</b></td><td>렌더 결과를 <b>불변 버전</b>으로 저장 (PostgreSQL) · diff·감사</td></tr>
+    <tr><td><b>ZTP</b></td><td>Zero-Touch 프로비저닝 — <b>부팅 스크립트 · OS 이미지 · Render가 만든 초기 설정</b>을 전달해 무인 세팅 (S3/SFTP)</td></tr>
+    <tr><td><b>DHCP</b></td><td><b>Kea</b>(오픈소스) DHCP 서버 · 어떤 장비에 어떤 IP를 줄지 <b>Nautobot 인벤토리에서 자동 생성</b></td></tr>
+    <tr><td><b>Temporal</b></td><td>승인 게이트 워크플로 오케스트레이션 (deploy·backup·검증…)</td></tr>
+    <tr><td><b>UI / MCP</b></td><td>React/Next.js 관리 콘솔 · <b>MCP 서버</b>로 AI/LLM 에이전트 연동</td></tr>
+  </table>
+  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/README.md · /docs/temporal · /docs/overview/mcp.mdx</div>
+</section>
+
+<!-- 7 · Config Store -->
+<section class="slide">
+  <div class="eyebrow"><span class="sn">07</span>핵심 설계</div>
+  <h2 class="stitle">Config Store — 불변 버전</h2>
+  <p class="lead">렌더 결과를 <b>절대 덮어쓰지 않고</b> 새 버전으로만 쌓는다.</p>
+  <ul class="pts">
+    <li><code>intended</code> / <code>backup</code> 두 타입, 버전 자동 증가 <span class="m">(v1 →)</span></li>
+    <li><b>불변</b> — 수정 없이 새 버전만 → 완전한 <b>감사 추적</b></li>
+    <li><b>SHA256</b> content hash로 중복 제거 · 버전간 <b>diff</b> · 1년 보관</li>
+    <li>FastAPI REST + OpenAPI · Redis 캐시 (cache refresh service)</li>
+  </ul>
+  <div class="kx"><b>감사·롤백·재현을 기본 확보</b> · aipub 차용 후보 ①.</div>
+  <div class="src">출처 · https://github.com/NVIDIA/nv-config-manager/blob/main/docs/config-store/config-store-architecture.mdx</div>
+</section>
+
+<!-- 8b · 레이어 포지셔닝 -->
+<section class="slide">
+  <div class="eyebrow">레이어 · 포지셔닝</div>
+  <h2 class="stitle">AI 팩토리 속 NVCM의 위치</h2>
+  <p class="lead">NVCM은 <b>네트워크 스위치 구성</b> 레이어 · AIPub은 그 위 <b>k8s 플랫폼</b> 레이어 — <b>서로 다른 층</b>.</p>
+  <div class="minisvg">
+    <svg viewBox="0 0 820 290" role="img" aria-label="AI 팩토리 레이어 스택과 NVCM 위치">
+      <!-- ⑤ 워크로드 -->
+      <rect x="120" y="20" width="584" height="44" rx="9" fill="#2b2620" stroke="#4a4436" stroke-width="1.3"/>
+      <text x="412" y="47" text-anchor="middle" fill="#e6edf3" font-size="12.5">⑤ ML 워크로드 — 학습 · 추론 Job</text>
+      <!-- ④ AIPub -->
+      <rect x="120" y="71" width="584" height="44" rx="9" fill="url(#ld-blue)" stroke="#58a6ff" stroke-width="2"/>
+      <text x="412" y="98" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">④ k8s 플랫폼 — AIPub · Project · Quota · RBAC</text>
+      <text x="712" y="99" fill="#58a6ff" font-size="11" font-weight="700">◀ 우리(AIPub)</text>
+      <!-- ③ k8s -->
+      <rect x="120" y="122" width="584" height="44" rx="9" fill="#2b2620" stroke="#4a4436" stroke-width="1.3"/>
+      <text x="412" y="149" text-anchor="middle" fill="#e6edf3" font-size="12.5">③ k8s 클러스터 — 노드 · CNI</text>
+      <!-- ② NVCM -->
+      <rect x="120" y="173" width="584" height="44" rx="9" fill="url(#ld-green)" stroke="#7ee787" stroke-width="2" filter="url(#ld-glow)"/>
+      <text x="412" y="200" text-anchor="middle" fill="#e6edf3" font-size="12.5" font-weight="700">② 네트워크 스위치 구성 — OS · config 생성/버전/배포</text>
+      <text x="712" y="201" fill="#7ee787" font-size="11" font-weight="700">◀ NVCM</text>
+      <!-- ① 물리 -->
+      <rect x="120" y="224" width="584" height="44" rx="9" fill="#241f18" stroke="#4a4436" stroke-width="1.3"/>
+      <text x="412" y="245" text-anchor="middle" fill="#cfc7b6" font-size="11.5">① 물리 인프라 — GPU 서버 · 스위치 HW · 케이블</text>
+      <text x="412" y="260" text-anchor="middle" fill="#8a8296" font-size="9.5">fabric 제어(NICo / DPF · DPU)</text>
+    </svg>
+  </div>
+  <ul class="pts">
+    <li><b>NVCM 진입점 = ②</b> — 스위치 HW·케이블은 이미 있는 상태(①)에서 <b>그 스위치의 OS·config를 자동화</b></li>
+    <li><b>Day-0</b>는 AI 팩토리 전체가 아니라 <b>스위치가 처음 부팅되는 시점</b> <span class="m">(레이어마다 각자의 Day-0가 있음)</span></li>
+    <li><b>NVCM ≠ AIPub</b> — 층이 다름(②↔④) · 직접 얽히지 않음 → 제품이 아닌 <b>패턴만 차용</b></li>
+  </ul>
+</section>
+
+<!-- 9 · 동형성 -->
+<section class="slide">
+  <div class="eyebrow">aipub 적용 · 전제</div>
+  <h2 class="stitle">구조적 동형성</h2>
+  <p class="lead">레이어는 다르지만 골격이 같다: <b>선언 → 조정 → 저장 → 승인 → 관측</b>.</p>
+  <table>
+    <tr><th>개념</th><th>NVCM (네트워크 레이어)</th><th>aipub (k8s 플랫폼 레이어)</th></tr>
+    <tr><td>단일 진실 공급원</td><td>Nautobot</td><td>Project CR + etcd</td></tr>
+    <tr><td>렌더 / 조정</td><td>Render (Jinja2)</td><td>controller-runtime reconcile</td></tr>
+    <tr><td>diff 계산</td><td>버전 diff · SHA256</td><td>server-side apply dry-run</td></tr>
+    <tr><td>승인 · 감사</td><td>Temporal 승인 게이트</td><td><b>(없음 — 차용 후보)</b></td></tr>
+    <tr><td>AI 연동</td><td>MCP 서버</td><td><b>(없음 — 차용 후보)</b></td></tr>
+  </table>
+  <div class="kx">경계 유지: NVCM=<b>네트워크·반응형</b> / aipub=<b>k8s 플랫폼·재조정형</b>. 제품이 아니라 <b>패턴</b>만 이식.</div>
+</section>
+
+<!-- 10 · 적용 ① -->
+<section class="slide">
+  <div class="eyebrow">aipub 적용 · ①</div>
+  <h2 class="stitle">불변 렌더 이력 저장소</h2>
+  <p class="lead">현재 aipub — reconcile 결과를 k8s에 <b>현재 상태만</b> apply.</p>
+  <ul class="pts">
+    <li>→ reconcile가 만든 <b>manifest 스냅샷을 불변 버전 저장</b></li>
+    <li><b>누가·언제·무엇을</b> 감사 + 특정 버전으로 <b>롤백</b></li>
+    <li>SHA256 dedup · 버전간 diff는 그대로 차용 가능</li>
+    <li>구현: 외부 DB 없이 <b>Revision CRD</b> 또는 <code>status.history</code> 로 적용 가능할 듯</li>
+  </ul>
+  <div class="kx">Config Store 패턴을 <code>status.renderedRevision</code> · <code>history</code> · <code>drift</code> 로.</div>
+</section>
+
+<!-- 11 · 적용 ② -->
+<section class="slide">
+  <div class="eyebrow">aipub 적용 · ②</div>
+  <h2 class="stitle">민감 작업 승인 게이트</h2>
+  <p class="lead">위험한 변경엔 <b>사람 승인</b>을 강제.</p>
+  <ul class="pts">
+    <li>대상: <b>Quota 대폭 증설 · Project 삭제 · 리소스 회수</b></li>
+    <li>NVCM의 Temporal 승인 워크플로 = <b>human-in-the-loop</b></li>
+    <li>k8s에선 <b>Argo Workflows</b> 또는 승인 CRD + admission webhook</li>
+  </ul>
+  <div class="kx">"바로 적용" → <b>"승인 후 적용"</b> 안전장치.</div>
+</section>
+
+<!-- 12 · 적용 ③ -->
+<section class="slide">
+  <div class="eyebrow">aipub 적용 · ③</div>
+  <h2 class="stitle">MCP 셀프서비스</h2>
+  <p class="lead">이름도 목적도 가장 잘 맞는 차용 — <b>AI 연동</b>.</p>
+  <ul class="pts">
+    <li>NVCM은 <b>MCP 서버</b>로 플랫폼을 LLM 에이전트에 노출</li>
+    <li><b>aipub MCP 서버</b> → 자연어로 셀프서비스</li>
+    <li>"team-alpha에 GPU 4장 프로젝트 만들어줘" → <b>Project CR 생성</b></li>
+    <li>기존 <code>aipub-backend</code> API를 MCP tool로 감싸는 형태가 현실적</li>
+  </ul>
+  <div class="kx">포털 클릭 → <b>대화형 셀프서비스</b>로 진화.</div>
+</section>
+
+<!-- 13 · 끝맺음 -->
+<section class="slide">
+  <div class="eyebrow">끝맺음</div>
+  <h2 class="stitle">감사합니다</h2>
+</section>
+
+
+<div class="clickzone prev" id="zprev"></div>
+<div class="clickzone next" id="znext"></div>
+<div class="navbar">
+  <span class="counter" id="counter">1 / 14</span>
+  <span class="hint">← → · Space · F 전체화면 · 📄 PDF</span>
+</div>
+<div class="toolbar">
+  <button id="fs" type="button">⛶ 전체화면</button>
+  <button id="pdf" class="pdf" type="button">📄 PDF</button>
+  <button id="theme" type="button">🌙 다크</button>
+</div>
+
+<script>
+  const slides=[...document.querySelectorAll('.slide')];
+  let i=0; const prog=document.getElementById('prog'), counter=document.getElementById('counter');
+  function show(n){ i=Math.max(0,Math.min(slides.length-1,n));
+    slides.forEach((s,k)=>s.classList.toggle('active',k===i));
+    prog.style.width=((i+1)/slides.length*100)+'%';
+    counter.textContent=(i+1)+' / '+slides.length; }
+  function next(){ show(i+1) } function prev(){ show(i-1) }
+  document.addEventListener('keydown',e=>{
+    if(['ArrowRight','PageDown',' '].includes(e.key)){ e.preventDefault(); next(); }
+    else if(['ArrowLeft','PageUp'].includes(e.key)){ e.preventDefault(); prev(); }
+    else if(e.key==='Home'){ show(0) } else if(e.key==='End'){ show(slides.length-1) }
+    else if(e.key==='f'||e.key==='F'){ toggleFs(); } });
+  document.getElementById('znext').onclick=next;
+  document.getElementById('zprev').onclick=prev;
+  function toggleFs(){ if(!document.fullscreenElement){ document.documentElement.requestFullscreen&&document.documentElement.requestFullscreen(); } else { document.exitFullscreen&&document.exitFullscreen(); } }
+  document.getElementById('fs').onclick=toggleFs;
+  document.getElementById('pdf').onclick=()=>window.print();
+  const theme=document.getElementById('theme');
+  function setDark(on){ document.body.classList.toggle('dark',on); theme.textContent=on?'☀️ 라이트':'🌙 다크';
+    try{ localStorage.setItem('ld-theme',on?'dark':'light'); }catch(e){} }
+  let sd=false; try{ sd=localStorage.getItem('ld-theme')==='dark'; }catch(e){}
+  setDark(sd); theme.onclick=()=>setDark(!document.body.classList.contains('dark'));
+  show(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NVIDIA Config Manager (nv-config-manager) 구조·역할 정리 · AIPub 적용 검토</title>
+<meta name="description" content="NVIDIA/nv-config-manager(NVCM) 오픈소스 네트워크 자동화 플랫폼의 아키텍처·서비스 구성·이벤트 기반 데이터 흐름을 정리하고, AIPub k8s 플랫폼에 적용 가능한 패턴을 검토한다.">
+<style>
+:root {
+  --bg: #0b0f14;
+  --surface: #131921;
+  --surface-2: #1a2230;
+  --border: #1e2633;
+  --border-strong: #2c3a4a;
+  --green: #76b900;
+  --green-dim: rgba(118,185,0,.12);
+  --blue: #3b72d4;
+  --blue-dim: rgba(59,114,212,.12);
+  --amber: #c8941a;
+  --amber-dim: rgba(200,148,26,.1);
+  --red: #c0392b;
+  --red-dim: rgba(192,57,43,.1);
+  --text: #c8d0e0;
+  --text-strong: #e4eaf6;
+  --muted: #4a5568;
+  --muted-mid: #6b7a94;
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+  --sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --r: 4px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--sans);
+  font-size: 15px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Layout ── */
+.page-wrap { display: flex; gap: 0; align-items: flex-start; max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+.toc-col { display: none; width: 220px; flex-shrink: 0; position: sticky; top: 40px; padding: 40px 0; max-height: 100vh; overflow-y: auto; }
+.content-col { flex: 1; min-width: 0; max-width: 820px; padding: 48px 0 80px 0; margin: 0 auto; }
+@media (min-width: 1100px) {
+  .page-wrap { gap: 48px; }
+  .toc-col { display: block; }
+  .content-col { margin: 0; }
+}
+
+/* ── TOC ── */
+.toc-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); margin-bottom: 12px; }
+.toc-list { list-style: none; }
+.toc-list li { line-height: 1; }
+.toc-list a {
+  display: block; font-family: var(--mono); font-size: 11.5px; color: var(--muted-mid);
+  text-decoration: none; padding: 5px 0 5px 10px; border-left: 1px solid var(--border);
+  transition: color .15s, border-color .15s;
+}
+.toc-list a:hover { color: var(--text); border-color: var(--muted-mid); }
+.toc-list a.green { border-color: var(--border); }
+.toc-list a.green:hover { border-color: var(--green); }
+.toc-list a.blue:hover { border-color: var(--blue); }
+
+/* ── Title block ── */
+.title-block { border-bottom: 1px solid var(--border); padding-bottom: 32px; margin-bottom: 40px; }
+.title-eyebrow { font-family: var(--mono); font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--muted-mid); margin-bottom: 12px; }
+h1 { font-family: var(--mono); font-size: 22px; font-weight: 600; color: var(--text-strong); line-height: 1.35; text-wrap: balance; margin-bottom: 16px; }
+.title-meta { font-family: var(--mono); font-size: 11.5px; color: var(--muted); display: flex; flex-wrap: wrap; gap: 16px; }
+.title-meta span { white-space: nowrap; }
+.title-meta a { color: var(--muted-mid); text-decoration: none; border-bottom: 1px dotted var(--muted); }
+.title-meta a:hover { color: var(--green); }
+
+/* ── TL;DR box ── */
+.tldr { background: var(--surface); border: 1px solid var(--border-strong); border-left: 3px solid var(--green); border-radius: var(--r); padding: 16px 20px; margin-bottom: 40px; }
+.tldr-label { font-family: var(--mono); font-size: 10px; letter-spacing: .12em; text-transform: uppercase; color: var(--green); margin-bottom: 8px; }
+.tldr p { font-size: 14px; color: var(--text); }
+.tldr ul { margin: 8px 0 0 0; padding-left: 16px; font-size: 14px; }
+.tldr li { margin-bottom: 4px; }
+
+/* ── Section headings ── */
+.section { margin-bottom: 48px; padding-top: 8px; }
+h2 { font-family: var(--mono); font-size: 13px; font-weight: 600; letter-spacing: .06em; text-transform: uppercase; color: var(--text-strong); padding-left: 14px; border-left: 2px solid var(--green); margin-bottom: 20px; padding-top: 2px; padding-bottom: 2px; }
+h2.blue { border-left-color: var(--blue); }
+h2.amber { border-left-color: var(--amber); }
+h2.muted { border-left-color: var(--muted); }
+h3 { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-strong); margin-bottom: 10px; margin-top: 24px; }
+h4 { font-family: var(--mono); font-size: 12px; font-weight: 500; color: var(--muted-mid); margin-bottom: 8px; margin-top: 18px; letter-spacing: .04em; }
+p { margin-bottom: 12px; max-width: 68ch; }
+p:last-child { margin-bottom: 0; }
+
+/* ── Abbr / tooltip ── */
+abbr { text-decoration: underline dotted; cursor: help; transition: color .15s; position: relative; }
+abbr:hover { color: var(--green); }
+.term, abbr[data-tooltip] { border-bottom: 1px dashed var(--muted-mid); cursor: help; text-decoration: none; }
+
+/* ── Tooltip Modal ── */
+.tooltip-modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,.5); z-index: 9999; display: flex; align-items: center; justify-content: center; opacity: 0; pointer-events: none; transition: opacity .2s ease; }
+.tooltip-modal-overlay.active { opacity: 1; pointer-events: auto; }
+.tooltip-modal { background: var(--surface); border: 1px solid var(--border-strong); border-radius: var(--r); padding: 20px; max-width: 600px; width: 90%; max-height: 80vh; overflow-y: auto; box-shadow: 0 4px 20px rgba(0,0,0,.4); position: relative; animation: slideIn .2s ease; }
+@keyframes slideIn { from { opacity: 0; transform: scale(.95); } to { opacity: 1; transform: scale(1); } }
+.tooltip-modal-title { font-family: var(--mono); font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--green); margin-bottom: 12px; }
+.tooltip-modal-content { font-size: 14px; line-height: 1.6; color: var(--text); margin-bottom: 16px; }
+.tooltip-modal-close { position: absolute; top: 16px; right: 16px; background: var(--surface-2); border: 1px solid var(--border); color: var(--text); width: 32px; height: 32px; border-radius: 3px; cursor: pointer; display: flex; align-items: center; justify-content: center; font-size: 18px; font-weight: bold; transition: all .15s; font-family: system-ui; line-height: 1; }
+.tooltip-modal-close:hover { background: var(--border-strong); color: var(--text-strong); }
+
+/* ── Inline code / pre ── */
+code { font-family: var(--mono); font-size: 12.5px; background: var(--surface-2); color: #a8c8e8; padding: 1px 5px; border-radius: 3px; border: 1px solid var(--border); }
+pre { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; overflow-x: auto; margin: 12px 0; }
+pre code { background: none; border: none; padding: 0; color: #8ac0e0; font-size: 12px; }
+
+/* ── Badges ── */
+.badge { display: inline-block; font-family: var(--mono); font-size: 10px; font-weight: 600; letter-spacing: .08em; text-transform: uppercase; padding: 2px 7px; border-radius: 2px; vertical-align: middle; margin-left: 6px; }
+.badge-confirmed { background: var(--green-dim); color: var(--green); border: 1px solid var(--green); }
+.badge-medium { background: var(--amber-dim); color: var(--amber); border: 1px solid var(--amber); }
+.badge-neutral { background: var(--surface-2); color: var(--muted-mid); border: 1px solid var(--border-strong); }
+
+/* ── Tables ── */
+.table-wrap { overflow-x: auto; margin: 12px 0; }
+table { border-collapse: collapse; width: 100%; font-size: 13px; }
+thead th { font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted-mid); text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border-strong); white-space: nowrap; }
+tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: top; color: var(--text); }
+tbody tr:last-child td { border-bottom: none; }
+tbody tr:hover td { background: var(--surface); }
+td code { white-space: nowrap; }
+
+/* ── Lists ── */
+ul, ol { padding-left: 20px; margin-bottom: 12px; }
+li { margin-bottom: 5px; }
+li:last-child { margin-bottom: 0; }
+
+/* ── Divider ── */
+hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
+
+/* ── Callouts ── */
+.boundary-callout { background: var(--blue-dim); border: 1px solid rgba(59,114,212,.3); border-radius: var(--r); padding: 14px 16px; margin: 16px 0; font-size: 13.5px; }
+.boundary-callout .label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--blue); margin-bottom: 6px; }
+.caveat { background: var(--amber-dim); border: 1px solid rgba(200,148,26,.25); border-radius: var(--r); padding: 10px 14px; font-size: 13px; margin: 12px 0; }
+.caveat .label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--amber); margin-bottom: 4px; }
+.note { background: var(--green-dim); border: 1px solid rgba(118,185,0,.25); border-radius: var(--r); padding: 10px 14px; font-size: 13px; margin: 12px 0; }
+.note .label { font-family: var(--mono); font-size: 10px; letter-spacing: .1em; text-transform: uppercase; color: var(--green); margin-bottom: 4px; }
+
+/* ── Service cards ── */
+.svc-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 12px; margin: 16px 0; }
+.svc-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 13px 15px; }
+.svc-card.hl { border-color: var(--green); }
+.svc-name { font-family: var(--mono); font-size: 12.5px; font-weight: 700; color: var(--text-strong); margin-bottom: 3px; }
+.svc-tech { font-family: var(--mono); font-size: 10px; color: var(--muted-mid); margin-bottom: 8px; }
+.svc-card p { font-size: 12.5px; max-width: none; color: var(--text); }
+.svc-card code { font-size: 11px; }
+
+/* ── Day lifecycle ── */
+.day-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; margin: 16px 0; }
+.day-card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 14px 16px; }
+.day-label { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 6px; }
+.day-label.d0 { color: var(--muted-mid); }
+.day-label.d1 { color: var(--amber); }
+.day-label.d2 { color: var(--green); }
+.day-title { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--text-strong); margin-bottom: 8px; }
+.day-card ul { padding-left: 14px; font-size: 12.5px; color: var(--muted-mid); }
+.day-card li { margin-bottom: 3px; }
+
+/* ── Stats bar ── */
+.stats-bar { display: flex; flex-wrap: wrap; gap: 24px; margin: 16px 0; }
+.stat { text-align: center; }
+.stat-num { font-family: var(--mono); font-size: 24px; font-weight: 700; color: var(--text-strong); font-variant-numeric: tabular-nums; display: block; line-height: 1; margin-bottom: 3px; }
+.stat-label { font-family: var(--mono); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+
+/* ── Tree ── */
+.tree { font-family: var(--mono); font-size: 12px; line-height: 1.65; color: var(--text); white-space: pre; }
+.tree .dir { color: var(--green); }
+.tree .cmt { color: var(--muted); }
+
+/* ── Sources ── */
+.source-list { list-style: none; padding: 0; margin: 0; }
+.source-list li { padding: 7px 0; border-bottom: 1px solid var(--border); font-size: 12.5px; display: flex; gap: 10px; align-items: flex-start; }
+.source-list li:last-child { border-bottom: none; }
+.source-quality { font-family: var(--mono); font-size: 9.5px; letter-spacing: .06em; text-transform: uppercase; flex-shrink: 0; padding: 2px 6px; border-radius: 2px; margin-top: 1px; }
+.sq-primary { background: var(--green-dim); color: var(--green); }
+.sq-secondary { background: var(--blue-dim); color: var(--blue); }
+.source-url { color: var(--muted-mid); word-break: break-all; font-size: 12px; }
+
+/* ── SVG diagrams ── */
+.diagram-wrap { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r); padding: 20px 16px 12px; margin: 16px 0; overflow-x: auto; }
+.diagram-wrap svg { display: block; width: 100%; height: auto; min-width: 560px; }
+.diagram-caption { font-family: var(--mono); font-size: 10px; color: var(--muted); text-align: center; margin-top: 10px; letter-spacing: .06em; }
+</style>
+</head>
+<body>
+
+<div class="page-wrap">
+  <!-- TOC sidebar -->
+  <nav class="toc-col">
+    <div class="toc-label">목차</div>
+    <ul class="toc-list">
+      <li><a href="#update">문서 목적 · 포지셔닝</a></li>
+      <li><a href="#overview" class="green">NVCM 개요</a></li>
+      <li><a href="#arch" class="green">아키텍처</a></li>
+      <li><a href="#flow" class="green">이벤트 데이터 흐름</a></li>
+      <li><a href="#services">서비스별 상세</a></li>
+      <li><a href="#templates">템플릿 시스템</a></li>
+      <li><a href="#repo">저장소 구조</a></li>
+      <li><a href="#lifecycle">Day-0/1/2 매핑</a></li>
+      <li><a href="#deploy">배포 · 인증</a></li>
+      <li><a href="#aipub" class="blue">AIPub 적용 방안</a></li>
+      <li><a href="#takeaway">정리 · 시사점</a></li>
+      <li><a href="#sources">소스</a></li>
+    </ul>
+  </nav>
+
+  <!-- Main content -->
+  <main class="content-col">
+
+    <!-- Title -->
+    <div class="title-block">
+      <div class="title-eyebrow">nvcm · 구조 분석 · 2026-07-02</div>
+      <h1>NVIDIA Config Manager (nv-config-manager)<br>구조 · 역할 정리와 AIPub 적용 검토</h1>
+      <div class="title-meta">
+        <span>대상: <a href="https://github.com/NVIDIA/nv-config-manager" target="_blank">github.com/NVIDIA/nv-config-manager</a></span>
+        <span>상태: Developer Preview</span>
+        <span>라이선스: Open Source (Apache 2.0)</span>
+      </div>
+    </div>
+
+    <!-- TL;DR -->
+    <div class="tldr">
+      <div class="tldr-label">TL;DR</div>
+      <p><strong>NVCM(NVIDIA Config Manager)</strong>은 대규모 데이터센터 <em>네트워크</em>를 위한 오픈소스 자동화·구성 관리 플랫폼이다. Kubernetes 위에 Helm으로 배포되는 <strong>이벤트 기반 마이크로서비스 모노레포</strong>다.</p>
+      <ul>
+        <li><strong>핵심 패턴</strong>: Nautobot(<abbr data-tooltip="네트워크 인벤토리·IP·케이블·디바이스의 단일 진실 공급원(Single Source of Truth). Django 기반 오픈소스 DCIM/IPAM.">Source of Truth</abbr>) → 변경 이벤트 → <strong>NATS JetStream</strong> → <strong>Render</strong>(Jinja2) → <strong>Config Store</strong>(불변 버전 저장). 선언된 의도(intended)로부터 디바이스 설정을 자동 생성·버전관리한다.</li>
+        <li><strong>7개 서비스</strong>: Nautobot · Render · Config Store · ZTP · DHCP · Temporal · UI. 여기에 <strong>MCP 서버</strong>(AI/LLM 에이전트 연동)가 더해진다.</li>
+        <li><strong>AIPub 적용</strong>: NVCM은 네트워크/디바이스 레이어, AIPub은 k8s 플랫폼 레이어 — 레이어는 다르지만 "선언→렌더→불변 저장→승인→재조정" 패턴이 동형이다. <strong>불변 Config Store · Temporal 승인 게이트 · MCP 셀프서비스</strong> 세 가지가 차용 후보다.</li>
+      </ul>
+    </div>
+
+    <!-- ───────── 포지셔닝 ───────── -->
+    <section class="section" id="update">
+      <h2 class="amber">이 문서의 목적 · NVCM 포지셔닝</h2>
+      <div class="note">
+        <div class="label">이 문서의 목적</div>
+        <strong>NVIDIA가 공개한 <code>nv-config-manager</code>(NVCM)</strong>가 <strong>어떻게 구성되어 있고 어떤 역할을 하는지</strong> 정확히 파악하고, 그 설계 패턴 중 <strong>AIPub k8s 플랫폼에 적용 가능한 것</strong>을 도출한다.
+      </div>
+      <p>NVCM은 <strong>스위치·디바이스의 "구성 파일(config)"을 인벤토리로부터 생성·배포·버전관리</strong>하는 레이어에서 동작한다. 물리 fabric·DPU 인프라를 직접 제어하는 하위 레이어가 아니라, 그 위에서 네트워크 디바이스 구성을 자동화하는 상위 레이어다.</p>
+    </section>
+
+    <!-- ───────── 개요 ───────── -->
+    <section class="section" id="overview">
+      <h2>NVCM 개요</h2>
+      <p>NVCM은 스스로를 <em>"대규모 데이터센터 운영을 위한 오픈소스 네트워크 자동화·구성 관리 플랫폼"</em>이라 정의한다. 스위치 인프라 전반의 구성과 프로비저닝을 통합해 <strong>수작업 구성 워크플로를 제거하고 Infrastructure-as-Code 방식</strong>을 가능하게 한다.</p>
+
+      <div class="stats-bar">
+        <div class="stat"><span class="stat-num">7</span><span class="stat-label">core services</span></div>
+        <div class="stat"><span class="stat-num">Py 3.11+</span><span class="stat-label">backend / FastAPI</span></div>
+        <div class="stat"><span class="stat-num">Next.js</span><span class="stat-label">UI (Node 23+)</span></div>
+        <div class="stat"><span class="stat-num">Helm</span><span class="stat-label">k8s 배포</span></div>
+        <div class="stat"><span class="stat-num">3</span><span class="stat-label">리소스 프로파일</span></div>
+      </div>
+
+      <h3>어떤 문제를 푸는가</h3>
+      <ul>
+        <li><strong>단일 진실 공급원(SoT)</strong>: 디바이스·IP·케이블·인벤토리를 Nautobot 한 곳에서 관리한다.</li>
+        <li><strong>선언 → 자동 렌더</strong>: SoT가 바뀌면 이벤트가 발생하고, 템플릿으로 디바이스별 config를 자동 생성한다(수작업 CLI 제거).</li>
+        <li><strong>Zero-Touch 프로비저닝</strong>: 새 스위치가 네트워크에 붙으면 DHCP→ZTP로 부팅 스크립트·OS 이미지·설정을 자동 전달한다(Day-0).</li>
+        <li><strong>변경 워크플로 + 승인 게이트</strong>: 운영 중(Day-2) 변경은 Temporal 워크플로로 오케스트레이션하고, 사람 승인·감사 추적을 남긴다.</li>
+        <li><strong>불변 이력·롤백</strong>: 렌더된 config를 버전별 불변 저장, diff·감사·롤백을 지원한다.</li>
+      </ul>
+
+      <div class="caveat">
+        <div class="label">주의 — Developer Preview</div>
+        공식 문서는 현재 <strong>프로덕션 사용을 권장하지 않는다</strong>. API·스키마가 변할 수 있으므로 AIPub 적용 시에는 "패턴을 차용" 관점으로 접근하는 것이 안전하다.
+      </div>
+    </section>
+
+    <!-- ───────── 아키텍처 ───────── -->
+    <section class="section" id="arch">
+      <h2>아키텍처 — 이벤트 기반 마이크로서비스</h2>
+      <p>NVCM은 하나의 모노레포에서 여러 전문 서비스가 <strong>NATS JetStream 이벤트 브로커</strong>를 중심으로 느슨하게 결합된 구조다. 상태는 PostgreSQL(Config Store)과 Redis(캐시·분산 락)에 저장되고, 모든 진실의 근원은 Nautobot이다.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 430" aria-label="NVCM 전체 아키텍처">
+          <defs>
+            <marker id="a-g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+            <marker id="a-m" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#6b7a94"/></marker>
+            <marker id="a-am" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#c8941a"/></marker>
+          </defs>
+
+          <!-- Band 1: Access -->
+          <rect x="1" y="10" width="698" height="70" rx="4" fill="#0d1220" stroke="#1e2a40"/>
+          <text x="10" y="25" font-family="ui-monospace,monospace" font-size="9" fill="#6a7aaa" letter-spacing="1.2">ACCESS LAYER</text>
+          <rect x="10" y="32" width="160" height="40" rx="3" fill="#111828" stroke="#2c3a4a"/><text x="90" y="50" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">UI</text><text x="90" y="64" font-family="ui-monospace,monospace" font-size="8.5" fill="#6a7aaa" text-anchor="middle">React / Next.js</text>
+          <rect x="178" y="32" width="160" height="40" rx="3" fill="#111828" stroke="#2c3a4a"/><text x="258" y="50" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">REST API</text><text x="258" y="64" font-family="ui-monospace,monospace" font-size="8.5" fill="#6a7aaa" text-anchor="middle">FastAPI · OpenAPI</text>
+          <rect x="346" y="32" width="170" height="40" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.3"/><text x="431" y="50" font-family="ui-monospace,monospace" font-size="11" font-weight="600" fill="#5a90e0" text-anchor="middle">MCP Server</text><text x="431" y="64" font-family="ui-monospace,monospace" font-size="8.5" fill="#6a7aaa" text-anchor="middle">AI/LLM 에이전트 연동</text>
+          <rect x="524" y="32" width="166" height="40" rx="3" fill="#111828" stroke="#2c3a4a"/><text x="607" y="50" font-family="ui-monospace,monospace" font-size="11" fill="#c8d0e0" text-anchor="middle">Go Bindings</text><text x="607" y="64" font-family="ui-monospace,monospace" font-size="8.5" fill="#6a7aaa" text-anchor="middle">bindings/go (생성)</text>
+
+          <!-- down arrows -->
+          <line x1="200" y1="80" x2="200" y2="98" stroke="#6b7a94" stroke-width="1" marker-end="url(#a-m)"/>
+          <line x1="500" y1="80" x2="500" y2="98" stroke="#6b7a94" stroke-width="1" marker-end="url(#a-m)"/>
+          <text x="350" y="93" font-family="ui-monospace,monospace" font-size="8" fill="#4a5568" text-anchor="middle">HTTPS REST · OIDC · SPIFFE mTLS</text>
+
+          <!-- Band 2: Core services -->
+          <rect x="1" y="100" width="698" height="82" rx="4" fill="#0d1a12" stroke="#1a2e1a"/>
+          <text x="10" y="115" font-family="ui-monospace,monospace" font-size="9" fill="#6a8a6a" letter-spacing="1.2">CORE SERVICES (event-driven)</text>
+          <rect x="10" y="122" width="160" height="52" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.3"/><text x="90" y="143" font-family="ui-monospace,monospace" font-size="12" font-weight="700" fill="#76b900" text-anchor="middle">Render</text><text x="90" y="160" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">이벤트 소비 · Jinja2</text>
+          <rect x="178" y="122" width="160" height="52" rx="3" fill="#121d13" stroke="#2c3a4a"/><text x="258" y="143" font-family="ui-monospace,monospace" font-size="12" fill="#c8d0e0" text-anchor="middle">ZTP</text><text x="258" y="160" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">부팅·OS 이미지 전달</text>
+          <rect x="346" y="122" width="160" height="52" rx="3" fill="#121d13" stroke="#2c3a4a"/><text x="426" y="143" font-family="ui-monospace,monospace" font-size="12" fill="#c8d0e0" text-anchor="middle">DHCP</text><text x="426" y="160" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">Kea config 생성</text>
+          <rect x="514" y="122" width="176" height="52" rx="3" fill="#121d13" stroke="#2c3a4a"/><text x="602" y="143" font-family="ui-monospace,monospace" font-size="12" fill="#c8d0e0" text-anchor="middle">Temporal</text><text x="602" y="160" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">워크플로·승인 게이트</text>
+
+          <!-- Band 3: NATS bus -->
+          <rect x="10" y="196" width="680" height="30" rx="4" fill="#1c1608" stroke="#c8941a" stroke-width="1.2"/>
+          <text x="350" y="215" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#c8941a" text-anchor="middle">NATS JetStream — 이벤트 브로커 (pull consumers · TLS + 인증)</text>
+          <line x1="90" y1="174" x2="90" y2="194" stroke="#c8941a" stroke-width="1.2" marker-end="url(#a-am)"/>
+          <line x1="602" y1="174" x2="602" y2="194" stroke="#c8941a" stroke-width="1.2" marker-end="url(#a-am)"/>
+
+          <!-- Band 4: State / SoT -->
+          <rect x="1" y="244" width="698" height="176" rx="4" fill="#0d1318" stroke="#1e2633"/>
+          <text x="10" y="259" font-family="ui-monospace,monospace" font-size="9" fill="#6a7a8a" letter-spacing="1.2">SOURCE OF TRUTH · STATE</text>
+
+          <!-- Nautobot -->
+          <rect x="10" y="268" width="216" height="84" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.3"/>
+          <text x="118" y="290" font-family="ui-monospace,monospace" font-size="12.5" font-weight="700" fill="#76b900" text-anchor="middle">Nautobot</text>
+          <text x="118" y="306" font-family="ui-monospace,monospace" font-size="9" fill="#7aaa7a" text-anchor="middle">Network Source of Truth</text>
+          <text x="118" y="322" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">디바이스·IP·케이블·인벤토리</text>
+          <text x="118" y="336" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">+ 변경 이벤트 발행(webhook)</text>
+
+          <!-- Config Store -->
+          <rect x="242" y="268" width="216" height="84" rx="3" fill="#131921" stroke="#3b72d4" stroke-width="1.3"/>
+          <text x="350" y="290" font-family="ui-monospace,monospace" font-size="12.5" font-weight="700" fill="#5a90e0" text-anchor="middle">Config Store</text>
+          <text x="350" y="306" font-family="ui-monospace,monospace" font-size="9" fill="#6a7aaa" text-anchor="middle">PostgreSQL (CNPG)</text>
+          <text x="350" y="322" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">불변 버전관리 · SHA256 dedup</text>
+          <text x="350" y="336" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">intended / backup · diff</text>
+
+          <!-- Redis -->
+          <rect x="474" y="268" width="216" height="84" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="582" y="290" font-family="ui-monospace,monospace" font-size="12.5" font-weight="700" fill="#c8d0e0" text-anchor="middle">Redis</text>
+          <text x="582" y="306" font-family="ui-monospace,monospace" font-size="9" fill="#8090a8" text-anchor="middle">캐시 · 분산 락</text>
+          <text x="582" y="322" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">Nautobot 캐시 · 렌더 락</text>
+          <text x="582" y="336" font-family="ui-monospace,monospace" font-size="8.5" fill="#8090a8" text-anchor="middle">Temporal/DHCP 캐시</text>
+
+          <!-- arrows between bus and state -->
+          <line x1="118" y1="268" x2="118" y2="226" stroke="#76b900" stroke-width="1.1" marker-end="url(#a-g)"/>
+          <text x="118" y="242" font-family="ui-monospace,monospace" font-size="7.5" fill="#7aaa7a" text-anchor="middle">변경→이벤트</text>
+          <line x1="350" y1="226" x2="350" y2="266" stroke="#3b72d4" stroke-width="1.1" marker-end="url(#a-m)"/>
+          <text x="392" y="250" font-family="ui-monospace,monospace" font-size="7.5" fill="#6a7aaa" text-anchor="middle">렌더 결과 저장</text>
+        </svg>
+        <div class="diagram-caption">NVCM 아키텍처 — Access / Core Services / NATS 이벤트 버스 / Source of Truth·State 4개 밴드</div>
+      </div>
+
+      <h3>기술 스택</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>영역</th><th>기술</th></tr></thead>
+          <tbody>
+            <tr><td>Backend</td><td>Python 3.11+ · FastAPI (패키지 관리 <code>uv</code>)</td></tr>
+            <tr><td>Frontend</td><td>TypeScript · React · Next.js (Node 23+)</td></tr>
+            <tr><td>이벤트 브로커</td><td>NATS JetStream (pull consumer, TLS + 인증)</td></tr>
+            <tr><td>영속 저장</td><td>PostgreSQL (CNPG operator) · Redis(캐시·락)</td></tr>
+            <tr><td>워크플로 엔진</td><td>Temporal</td></tr>
+            <tr><td>SoT / 인벤토리</td><td>Nautobot (Django 기반 DCIM/IPAM) + GraphQL</td></tr>
+            <tr><td>인프라</td><td>Kubernetes · Helm · Docker · Kind(로컬)</td></tr>
+            <tr><td>인증</td><td>OIDC PKCE · SPIFFE/SPIRE mTLS · Keycloak(예시)</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ───────── 이벤트 흐름 ───────── -->
+    <section class="section" id="flow">
+      <h2>이벤트 기반 데이터 흐름 — 렌더 파이프라인</h2>
+      <p>NVCM의 심장부는 <strong>Render 서비스</strong>다. 스스로를 <em>"네트워크 디바이스 구성을 자동 생성·버전관리하는 이벤트 기반 마이크로서비스"</em>로 정의하며, NATS JetStream에서 3종의 <strong>pull 컨슈머</strong>로 이벤트를 소비한다.</p>
+
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 372" aria-label="NVCM 렌더 이벤트 흐름">
+          <defs>
+            <marker id="f-g" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#76b900"/></marker>
+            <marker id="f-am" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#c8941a"/></marker>
+            <marker id="f-b" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b72d4"/></marker>
+          </defs>
+
+          <!-- 1 Nautobot -->
+          <rect x="250" y="8" width="200" height="46" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.3"/>
+          <text x="350" y="27" font-family="ui-monospace,monospace" font-size="11.5" font-weight="700" fill="#76b900" text-anchor="middle">Nautobot 모델 변경</text>
+          <text x="350" y="43" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">device · interface · cable · IP</text>
+          <line x1="350" y1="54" x2="350" y2="72" stroke="#c8941a" stroke-width="1.2" marker-end="url(#f-am)"/>
+          <text x="392" y="67" font-family="ui-monospace,monospace" font-size="8" fill="#c8941a">webhook</text>
+
+          <!-- 2 NATS -->
+          <rect x="200" y="74" width="300" height="30" rx="3" fill="#1c1608" stroke="#c8941a" stroke-width="1.2"/>
+          <text x="350" y="93" font-family="ui-monospace,monospace" font-size="10.5" font-weight="700" fill="#c8941a" text-anchor="middle">NATS JetStream (event stream)</text>
+
+          <!-- fanout -->
+          <line x1="300" y1="104" x2="118" y2="126" stroke="#6b7a94" stroke-width="1" marker-end="url(#f-am)"/>
+          <line x1="350" y1="104" x2="350" y2="126" stroke="#6b7a94" stroke-width="1" marker-end="url(#f-am)"/>
+          <line x1="400" y1="104" x2="583" y2="126" stroke="#6b7a94" stroke-width="1" marker-end="url(#f-am)"/>
+
+          <!-- 3 consumers -->
+          <rect x="8" y="128" width="218" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="117" y="147" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#c8d0e0" text-anchor="middle">Nautobot Event Consumer</text>
+          <text x="117" y="162" font-family="ui-monospace,monospace" font-size="8" fill="#8090a8" text-anchor="middle">모델 변경 → 핸들러 dispatch</text>
+          <text x="117" y="175" font-family="ui-monospace,monospace" font-size="8" fill="#8090a8" text-anchor="middle">디바이스 렌더 큐잉</text>
+
+          <rect x="241" y="128" width="218" height="58" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.3"/>
+          <text x="350" y="147" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#76b900" text-anchor="middle">Device Change Consumer</text>
+          <text x="350" y="162" font-family="ui-monospace,monospace" font-size="8" fill="#7aaa7a" text-anchor="middle">Redis 분산 락으로 렌더 실행</text>
+          <text x="350" y="175" font-family="ui-monospace,monospace" font-size="8" fill="#7aaa7a" text-anchor="middle">→ Config Store 갱신</text>
+
+          <rect x="474" y="128" width="218" height="58" rx="3" fill="#131921" stroke="#2c3a4a"/>
+          <text x="583" y="147" font-family="ui-monospace,monospace" font-size="10" font-weight="600" fill="#c8d0e0" text-anchor="middle">Template Change Consumer</text>
+          <text x="583" y="162" font-family="ui-monospace,monospace" font-size="8" fill="#8090a8" text-anchor="middle">템플릿 버전 갱신 시</text>
+          <text x="583" y="175" font-family="ui-monospace,monospace" font-size="8" fill="#8090a8" text-anchor="middle">stale 디바이스 재렌더</text>
+
+          <!-- to pipeline -->
+          <line x1="350" y1="186" x2="350" y2="206" stroke="#76b900" stroke-width="1.3" marker-end="url(#f-g)"/>
+
+          <!-- 4 render pipeline -->
+          <rect x="40" y="208" width="620" height="66" rx="3" fill="#0d1a12" stroke="#76b900" stroke-width="1.3"/>
+          <text x="350" y="226" font-family="ui-monospace,monospace" font-size="10.5" font-weight="700" fill="#76b900" text-anchor="middle">Render 파이프라인</text>
+          <text x="350" y="244" font-family="ui-monospace,monospace" font-size="9" fill="#9cc46a" text-anchor="middle">① Nautobot GraphQL 조회 &#160;→&#160; ② nv_config_manager_templates.Renderer (Jinja2)</text>
+          <text x="350" y="260" font-family="ui-monospace,monospace" font-size="9" fill="#9cc46a" text-anchor="middle">③ Config Store 저장 &#160;→&#160; ④ commit 메타데이터를 Nautobot에 기록</text>
+
+          <line x1="350" y1="274" x2="350" y2="294" stroke="#3b72d4" stroke-width="1.3" marker-end="url(#f-b)"/>
+
+          <!-- 5 config store -->
+          <rect x="180" y="296" width="340" height="46" rx="3" fill="#131921" stroke="#3b72d4" stroke-width="1.3"/>
+          <text x="350" y="315" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#5a90e0" text-anchor="middle">Config Store</text>
+          <text x="350" y="332" font-family="ui-monospace,monospace" font-size="8.5" fill="#6a7aaa" text-anchor="middle">불변 버전(v1..n) · SHA256 dedup · 버전간 diff · 1년 보관</text>
+
+          <!-- feedback loop -->
+          <path d="M 520 319 C 640 319, 660 160, 583 128" fill="none" stroke="#3b72d4" stroke-width="1" stroke-dasharray="3,3"/>
+          <text x="648" y="250" font-family="ui-monospace,monospace" font-size="7.5" fill="#4a6a9a" text-anchor="middle" transform="rotate(90 648 250)">commit 메타 기록</text>
+        </svg>
+        <div class="diagram-caption">렌더 흐름 — 수동 트리거(POST /v1/render/{uuid}/render · /all · /batch)도 동일 파이프라인 사용</div>
+      </div>
+
+      <h3>흐름의 핵심 특징</h3>
+      <ul>
+        <li><strong>동적 이벤트 라우팅</strong>: <code>events/</code> 모듈을 introspection하여 Nautobot 모델 이벤트를 핸들러 함수에 자동 매핑(수동 등록 불필요).</li>
+        <li><strong>분산 락</strong>: Redis 기반 락으로 다수 컨슈머 인스턴스가 같은 디바이스를 동시에 렌더하지 못하게 막는다.</li>
+        <li><strong>무중단 롤링 배포</strong>: Template Producer(배포 시 Kubernetes Job)가 stale 템플릿 버전 디바이스를 찾아 재렌더 이벤트를 발행. 더 새로운 템플릿 버전은 30초 지연 NAK으로 거부해 롤링 중 충돌 방지.</li>
+        <li><strong>관측성</strong>: 이벤트 수신·처리·실패·처리시간, end-to-end 지연을 Prometheus 메트릭으로 노출.</li>
+        <li><strong>재조정 방식</strong>: NVCM은 주기적 reconcile이 아니라 <strong>이벤트 기반 반응형</strong>이다(변경 발생 시에만 렌더). — 이 점이 controller-runtime 기반 AIPub과의 중요한 차이다(뒤 AIPub 절 참고).</li>
+      </ul>
+    </section>
+
+    <!-- ───────── 서비스별 상세 ───────── -->
+    <section class="section" id="services">
+      <h2>서비스별 역할 상세</h2>
+
+      <div class="svc-grid">
+        <div class="svc-card hl">
+          <div class="svc-name">Nautobot</div>
+          <div class="svc-tech">Django · GraphQL · SoT</div>
+          <p>네트워크 단일 진실 공급원. 디바이스·IP·케이블·인벤토리 관리 + 모델 변경 시 이벤트 발행. 커스텀 Job 실행. <code>nautobot-app-overlays</code>로 InfiniBand mkey/pkey·VXLAN 오버레이 모델링.</p>
+        </div>
+        <div class="svc-card hl">
+          <div class="svc-name">Render</div>
+          <div class="svc-tech">Python · Jinja2 · NATS</div>
+          <p>이벤트를 소비해 Nautobot 데이터 + Jinja2 템플릿으로 디바이스별 config를 생성. 3종 pull 컨슈머 + 동적 dispatch + Redis 락. 결과를 Config Store에 저장.</p>
+        </div>
+        <div class="svc-card">
+          <div class="svc-name">Config Store</div>
+          <div class="svc-tech">Python · FastAPI · PostgreSQL</div>
+          <p>렌더된 config를 <strong>불변 버전</strong>으로 영속화. <code>intended</code>/<code>backup</code> 타입, 버전 자동 증가(v1~), SHA256 dedup, 버전간 diff, 1년 보관. Redis 캐시 + cache refresh service.</p>
+        </div>
+        <div class="svc-card">
+          <div class="svc-name">ZTP</div>
+          <div class="svc-tech">Python · S3 / SFTP</div>
+          <p>Zero-Touch Provisioning. 새 디바이스에 부팅 스크립트·OS 이미지·설정을 전달하고 프로비저닝 상태를 갱신. 저장 백엔드로 S3·SFTP·filestore 지원.</p>
+        </div>
+        <div class="svc-card">
+          <div class="svc-name">DHCP</div>
+          <div class="svc-tech">Python · Kea · Redis</div>
+          <p>Nautobot 인벤토리로부터 <strong>Kea DHCP</strong> 구성을 생성(<code>kea_dhcp_confgen.py</code>). ZTP 부팅을 위한 IP·부팅 정보 제공. GraphQL 조회 + 메트릭.</p>
+        </div>
+        <div class="svc-card">
+          <div class="svc-name">Temporal</div>
+          <div class="svc-tech">Temporal · Worker</div>
+          <p>장기 실행 작업·<strong>승인 게이트 워크플로</strong> 오케스트레이션. UI와 백엔드 서비스 간 조정. deploy·backup·비밀번호 로테이션 등 다수 내장 워크플로.</p>
+        </div>
+        <div class="svc-card">
+          <div class="svc-name">UI</div>
+          <div class="svc-tech">React · Next.js</div>
+          <p>관리용 웹 인터페이스. 렌더·배포·워크플로·승인·이력 조회. 로컬 <code>config-manager.local</code> 엔드포인트로 접근.</p>
+        </div>
+        <div class="svc-card">
+          <div class="svc-name">MCP Server</div>
+          <div class="svc-tech">Model Context Protocol</div>
+          <p>NVCM을 <strong>AI/LLM 에이전트</strong>에 노출하는 MCP 서버(<code>src/nv_config_manager/mcp</code>). OAuth proxy·tools·workflows. 자연어로 플랫폼을 조회·조작하는 진입점.</p>
+        </div>
+      </div>
+
+      <h3>Temporal 내장 워크플로 (일부)</h3>
+      <p>운영 자동화의 실체는 Temporal 워크플로에 담겨 있다. 문서에 정의된 워크플로 예:</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>워크플로</th><th>역할</th></tr></thead>
+          <tbody>
+            <tr><td><code>deploy</code></td><td>렌더된 config를 실제 디바이스에 배포(승인 게이트 포함)</td></tr>
+            <tr><td><code>backup</code></td><td>디바이스 현재 구성 백업 → Config Store <code>backup</code> 타입 저장</td></tr>
+            <tr><td><code>device-cable-validation</code></td><td>LLDP·MAC·ARP를 인벤토리 토폴로지와 대조해 케이블 검증</td></tr>
+            <tr><td><code>hardware-validation</code></td><td>하드웨어 상태 검증</td></tr>
+            <tr><td><code>bmc-provisioning</code></td><td>BMC 프로비저닝</td></tr>
+            <tr><td><code>device-password-rotation</code></td><td>디바이스 비밀번호 로테이션</td></tr>
+            <tr><td><code>ib-pkey-creation</code></td><td>InfiniBand partition key 생성</td></tr>
+            <tr><td><code>connected-host-metadata</code></td><td>연결된 호스트 메타데이터 수집</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- ───────── 템플릿 시스템 ───────── -->
+    <section class="section" id="templates">
+      <h2>템플릿 시스템 — network-templates</h2>
+      <p>렌더의 실제 로직은 별도 파이썬 패키지 <code>nv_config_manager_templates</code>(<code>components/network-templates</code>)에 담겨 컨트롤러와 <strong>분리·독립 버전관리</strong>된다. 이 분리가 "무중단 템플릿 롤아웃"을 가능케 한다.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>구성요소</th><th>내용</th></tr></thead>
+          <tbody>
+            <tr><td>대상 NOS</td><td>Cumulus Linux (버전별: 5.13.1 / 5.14.0 / 5.16.1)</td></tr>
+            <tr><td>디바이스 역할</td><td><code>border-leaf</code> · <code>converged-spine</code> · <code>in-band-leaf</code> …</td></tr>
+            <tr><td>템플릿(.j2)</td><td>entrypoint(boot-script, startup.yaml) + include(interface, bgp, evpn, vrf, qos, acl, bridge, nve, router, system, service)</td></tr>
+            <tr><td>dataclasses</td><td><code>bgp</code> · <code>interface</code> · <code>vrf</code> · <code>consoleport</code></td></tr>
+            <tr><td>filters</td><td><code>bgp</code> · <code>device</code> · <code>ip</code> · <code>location</code> · <code>vault</code></td></tr>
+            <tr><td>데이터 조회</td><td>Nautobot GraphQL 쿼리(<code>query_config_data_by_device_id_v2</code> 등)</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="note">
+        <div class="label">패턴 포인트</div>
+        <strong>"의도(SoT) → 타입 안전 데이터클래스 → 필터 → Jinja2 템플릿 → 렌더 결과"</strong>의 데이터 파이프라인. 템플릿·컨트롤러·데이터 스키마를 각각 독립 버전으로 관리하는 것이 핵심 설계다.
+      </div>
+    </section>
+
+    <!-- ───────── 저장소 구조 ───────── -->
+    <section class="section" id="repo">
+      <h2>저장소 구조 (모노레포)</h2>
+      <div class="diagram-wrap" style="padding:16px 18px;">
+<div class="tree"><span class="dir">nv-config-manager/</span>
+├── <span class="dir">src/nv_config_manager/</span>      <span class="cmt"># Python 서비스·라이브러리</span>
+│   ├── <span class="dir">common/</span>                 <span class="cmt"># auth · oidc · config · client · log</span>
+│   ├── <span class="dir">render/</span>                 <span class="cmt"># producer · pull_consumer · dispatch · events · lock</span>
+│   ├── <span class="dir">config_store/</span>           <span class="cmt"># api · core · db · client · cache_refresh_service</span>
+│   ├── <span class="dir">ztp/</span>                    <span class="cmt"># device · storage(s3/sftp/filestore) · nautobot</span>
+│   ├── <span class="dir">dhcp/</span>                   <span class="cmt"># kea · kea_dhcp_confgen · graphql · redis · metrics</span>
+│   ├── <span class="dir">temporal/</span>               <span class="cmt"># worker · client · workflows · archive</span>
+│   └── <span class="dir">mcp/</span>                    <span class="cmt"># MCP 서버 · oauth_proxy · tools · workflows</span>
+├── <span class="dir">ui/</span>                         <span class="cmt"># React / Next.js 프런트엔드</span>
+├── <span class="dir">components/</span>
+│   ├── <span class="dir">nautobot/</span>               <span class="cmt"># nautobot-app-overlays · nautobot-nv-config-manager</span>
+│   └── <span class="dir">network-templates/</span>      <span class="cmt"># nv_config_manager_templates (Jinja2 · dataclasses · filters)</span>
+├── <span class="dir">deploy/helm/</span>               <span class="cmt"># Helm 차트 · values-local(-small/medium) · CI · observability</span>
+├── <span class="dir">installer/</span>                 <span class="cmt"># TUI/CLI 설치 마법사</span>
+├── <span class="dir">bindings/go/</span>               <span class="cmt"># Go SDK (make api-generate 로 생성)</span>
+├── <span class="dir">db/</span>                         <span class="cmt"># DB 마이그레이션</span>
+├── <span class="dir">build/</span>                      <span class="cmt"># 컨테이너 정의</span>
+├── <span class="dir">docs/</span>                       <span class="cmt"># Fern 문서 (overview · render · config-store · ztp · dhcp · temporal · mcp)</span>
+└── Makefile                    <span class="cmt"># kind-up · docker-build · lint · openapi-check</span></div>
+        <div class="diagram-caption">모노레포 디렉터리 구조 (요약)</div>
+      </div>
+    </section>
+
+    <!-- ───────── Day 라이프사이클 ───────── -->
+    <section class="section" id="lifecycle">
+      <h2>Day-0 / 1 / 2 라이프사이클 매핑</h2>
+      <p>NVCM 서비스는 네트워크 운영 라이프사이클 단계별로 명확히 정렬된다.</p>
+      <div class="day-grid">
+        <div class="day-card">
+          <div class="day-label d0">Day-0 · Bootstrap</div>
+          <div class="day-title">신규 디바이스 프로비저닝</div>
+          <ul>
+            <li>DHCP(Kea): IP·부팅 정보 제공</li>
+            <li>ZTP: 부팅 스크립트·OS 이미지 전달</li>
+            <li>Render: 초기 config 생성(Jinja2)</li>
+            <li>무인(Zero-Touch) 온보딩</li>
+          </ul>
+        </div>
+        <div class="day-card">
+          <div class="day-label d1">Day-1 · Configure</div>
+          <div class="day-title">의도 기반 구성</div>
+          <ul>
+            <li>Nautobot에 의도 선언(SoT)</li>
+            <li>변경 이벤트 → Render 파이프라인</li>
+            <li>Config Store에 intended 버전 저장</li>
+            <li>템플릿 롤아웃(무중단)</li>
+          </ul>
+        </div>
+        <div class="day-card">
+          <div class="day-label d2">Day-2 · Operate</div>
+          <div class="day-title">운영·변경·검증</div>
+          <ul>
+            <li>Temporal 워크플로 + 승인 게이트</li>
+            <li>deploy·backup·케이블/하드웨어 검증</li>
+            <li>버전 diff·감사·롤백</li>
+            <li>fleet 전반 드리프트 비교(intended vs actual)</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+    <!-- ───────── 배포·인증 ───────── -->
+    <section class="section" id="deploy">
+      <h2>배포 · 인증</h2>
+      <h3>리소스 프로파일</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>프로파일</th><th>사양</th><th>용도</th></tr></thead>
+          <tbody>
+            <tr><td>Small</td><td>8 vCPU · 24 GB</td><td>노트북 · CI (<code>make kind-up</code>)</td></tr>
+            <tr><td>Medium</td><td>16 vCPU · 64 GB</td><td>공용 VM</td></tr>
+            <tr><td>Large</td><td>96 vCPU · 256 GB · 3+ 노드</td><td>프로덕션 HA</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <ul>
+        <li><strong>로컬</strong>: <code>make kind-up</code> — Kind 클러스터 생성 + 이미지 빌드 + operator 설치 + 전체 배포까지 자동.</li>
+        <li><strong>Air-gapped</strong>: 연결된 시스템에서 번들 생성 → 폐쇄망에 레지스트리 업로드/노드 프리로드.</li>
+        <li><strong>설치</strong>: 대화형 TUI 또는 headless CLI 마법사.</li>
+        <li><strong>인증</strong>: 브라우저 기반 OIDC PKCE(CLI·테스트·스크립트·노트북용), <code>svc-*</code> 엔드포인트는 bearer 토큰 직접 수용, 서비스 간 SPIFFE/SPIRE mTLS.</li>
+      </ul>
+    </section>
+
+    <!-- ───────── AIPub 적용 ───────── -->
+    <section class="section" id="aipub">
+      <h2 class="blue">AIPub 적용 방안</h2>
+
+      <div class="boundary-callout">
+        <div class="label">레이어 경계 — 핵심 전제</div>
+        <strong>NVCM</strong>은 네트워크 디바이스/스위치 구성 레이어에서 동작하고, <strong>AIPub</strong>은 그 위 <abbr data-tooltip="Kubernetes 플랫폼 레이어에서 동작하는 AIPub의 리소스 관리 컨트롤러. Namespace·RBAC·ResourceQuota를 선언적으로 조정한다.">resource-group-controller</abbr> 중심의 k8s 플랫폼 레이어에서 동작한다. NVCM을 그대로 이식하는 것이 아니라, <strong>설계 패턴을 차용</strong>하는 관점이 옳다.
+      </div>
+
+      <h3>구조적 동형성 (Isomorphism)</h3>
+      <p>레이어는 다르지만 두 시스템 모두 <strong>"선언된 의도 → 렌더/조정 → 저장 → 승인 → 관측"</strong>이라는 동일한 골격을 가진다.</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>개념</th><th>NVCM (네트워크 레이어)</th><th>AIPub (k8s 플랫폼 레이어)</th></tr></thead>
+          <tbody>
+            <tr><td>단일 진실 공급원</td><td>Nautobot (인벤토리·IP·케이블)</td><td>Project CR spec (+ etcd)</td></tr>
+            <tr><td>의도 선언</td><td>Nautobot 모델 등록</td><td>CR <code>spec</code> 선언</td></tr>
+            <tr><td>변경 감지 트리거</td><td>webhook → NATS 이벤트(반응형)</td><td>watch → reconcile 큐(주기적 + 이벤트)</td></tr>
+            <tr><td>렌더/조정</td><td>Render(Jinja2) 파이프라인</td><td>controller-runtime reconcile()</td></tr>
+            <tr><td>결과 저장</td><td>Config Store 불변 버전</td><td>k8s API 객체(현재 상태만) apply</td></tr>
+            <tr><td>diff 계산</td><td>버전간 diff · SHA256</td><td>server-side apply dry-run → managed fields</td></tr>
+            <tr><td>승인·감사</td><td>Temporal 승인 게이트 워크플로</td><td>(현재 없음 — 차용 후보)</td></tr>
+            <tr><td>AI 연동</td><td>MCP 서버</td><td>(현재 없음 — 차용 후보)</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <h3>차용 후보 3선</h3>
+      <div class="diagram-wrap">
+        <svg viewBox="0 0 700 320" aria-label="NVCM 패턴의 AIPub 차용">
+          <defs>
+            <marker id="p-b" markerWidth="7" markerHeight="5" refX="6" refY="2.5" orient="auto"><polygon points="0 0,7 2.5,0 5" fill="#3b72d4"/></marker>
+          </defs>
+          <!-- top NVCM band -->
+          <text x="16" y="22" font-family="ui-monospace,monospace" font-size="9.5" fill="#76b900" letter-spacing="1">NVCM 패턴</text>
+          <rect x="12" y="30" width="210" height="66" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="117" y="52" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#76b900" text-anchor="middle">Config Store</text>
+          <text x="117" y="68" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">불변 버전 · diff</text>
+          <text x="117" y="82" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">감사 · 롤백</text>
+
+          <rect x="245" y="30" width="210" height="66" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="350" y="52" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#76b900" text-anchor="middle">Temporal 승인 게이트</text>
+          <text x="350" y="68" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">장기 워크플로</text>
+          <text x="350" y="82" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">human-in-the-loop</text>
+
+          <rect x="478" y="30" width="210" height="66" rx="3" fill="#121d13" stroke="#76b900" stroke-width="1.2"/>
+          <text x="583" y="52" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#76b900" text-anchor="middle">MCP 서버</text>
+          <text x="583" y="68" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">AI/LLM 에이전트</text>
+          <text x="583" y="82" font-family="ui-monospace,monospace" font-size="8.5" fill="#7aaa7a" text-anchor="middle">자연어 조작</text>
+
+          <!-- arrows -->
+          <line x1="117" y1="96" x2="117" y2="140" stroke="#3b72d4" stroke-width="1.3" marker-end="url(#p-b)"/>
+          <line x1="350" y1="96" x2="350" y2="140" stroke="#3b72d4" stroke-width="1.3" marker-end="url(#p-b)"/>
+          <line x1="583" y1="96" x2="583" y2="140" stroke="#3b72d4" stroke-width="1.3" marker-end="url(#p-b)"/>
+          <text x="350" y="128" font-family="ui-monospace,monospace" font-size="8.5" fill="#4a6a9a" text-anchor="middle">동일 패턴, k8s 플랫폼 레이어로 이식</text>
+
+          <!-- bottom AIPub band -->
+          <text x="16" y="160" font-family="ui-monospace,monospace" font-size="9.5" fill="#5a90e0" letter-spacing="1">AIPub 적용</text>
+          <rect x="12" y="168" width="210" height="80" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.3"/>
+          <text x="117" y="190" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#5a90e0" text-anchor="middle">렌더 결과 이력 저장소</text>
+          <text x="117" y="206" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">Project가 생성한</text>
+          <text x="117" y="219" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">manifest 스냅샷을 불변</text>
+          <text x="117" y="232" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">버전 저장 → diff·롤백</text>
+
+          <rect x="245" y="168" width="210" height="80" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.3"/>
+          <text x="350" y="190" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#5a90e0" text-anchor="middle">변경 승인 워크플로</text>
+          <text x="350" y="206" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">Quota 증설·Project 삭제</text>
+          <text x="350" y="219" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">등 민감 작업에 승인 게이트</text>
+          <text x="350" y="232" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">(Argo Workflows/Temporal)</text>
+
+          <rect x="478" y="168" width="210" height="80" rx="3" fill="#111828" stroke="#3b72d4" stroke-width="1.3"/>
+          <text x="583" y="190" font-family="ui-monospace,monospace" font-size="10" font-weight="700" fill="#5a90e0" text-anchor="middle">AIPub MCP 서버</text>
+          <text x="583" y="206" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">"team-a에 GPU 4개 프로젝트"</text>
+          <text x="583" y="219" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">→ 자연어 셀프서비스</text>
+          <text x="583" y="232" font-family="ui-monospace,monospace" font-size="8" fill="#6a7aaa" text-anchor="middle">Project CR 생성</text>
+
+          <!-- footer note -->
+          <rect x="12" y="266" width="676" height="42" rx="3" fill="#0d1820" stroke="#2c3a4a"/>
+          <text x="350" y="285" font-family="ui-monospace,monospace" font-size="9" fill="#8090a8" text-anchor="middle">공통 이점: 감사 추적성 · 롤백 가능성 · 셀프서비스 · human-in-the-loop 안전장치</text>
+          <text x="350" y="300" font-family="ui-monospace,monospace" font-size="8" fill="#5a6a80" text-anchor="middle">단, NVCM은 이벤트 기반 반응형 / AIPub은 controller-runtime 재조정형 — 트리거 모델 차이를 유지</text>
+        </svg>
+        <div class="diagram-caption">NVCM 3대 패턴 → AIPub k8s 플랫폼 레이어 차용안</div>
+      </div>
+
+      <h3>구체적 제안</h3>
+
+      <h4>1. 불변 렌더 이력 저장소 (Config Store 패턴)</h4>
+      <p>AIPub의 <code>resource-group-controller</code>는 현재 k8s API에 <em>현재 상태만</em> apply한다. NVCM Config Store처럼 <strong>reconcile가 생성한 manifest 묶음을 불변 버전으로 스냅샷 저장</strong>하면, "누가·언제·무엇을" 감사하고 특정 버전으로 롤백할 수 있다. SHA256 dedup·버전간 diff는 그대로 차용 가능한 설계다.</p>
+      <pre><code>status:
+  renderedRevision: 42                 # 불변 버전 번호
+  contentHash: sha256:9f3c…            # dedup용 해시
+  history:
+    - rev: 41, author: alice, ts: 2026-07-01T10:20Z, msg: "quota 16→24"
+  drift: [Unexpected | Stale | Missing | Intentional]   # intended vs actual</code></pre>
+
+      <h4>2. 민감 작업 승인 게이트 (Temporal 워크플로 패턴)</h4>
+      <p>NVCM은 디바이스 배포 같은 위험 작업을 Temporal 워크플로로 감싸 <strong>사람 승인</strong>을 강제한다. AIPub도 <em>ResourceQuota 대폭 증설</em>·<em>Project 삭제</em>·<em>클러스터 리소스 회수</em> 같은 작업에 승인 게이트를 두면 안전하다. k8s 환경이므로 Temporal 대신 <strong>Argo Workflows</strong>나 admission webhook 기반 승인 CRD로도 구현 가능하다.</p>
+
+      <h4>3. MCP 셀프서비스 (MCP 서버 패턴)</h4>
+      <p>NVCM은 MCP 서버로 플랫폼을 LLM 에이전트에 노출한다. "AIPub"이라는 이름·목적과 가장 잘 맞는 차용안이다. <strong>AIPub MCP 서버</strong>를 두면 사용자가 자연어("team-alpha에 GPU 4장짜리 프로젝트 만들어줘")로 Project CR을 생성·조회하는 셀프서비스가 된다. 기존 Spring Boot <code>aipub-backend</code> API를 MCP tool로 감싸는 형태가 현실적이다.</p>
+
+      <h4>보너스 — SoT + 이벤트 렌더 발상</h4>
+      <p>NVCM의 "Nautobot(SoT) → 이벤트 → 템플릿 렌더" 파이프라인은, AIPub이 <strong>여러 k8s 리소스를 하나의 상위 의도(Project)로부터 템플릿 렌더링</strong>하는 발상으로 옮길 수 있다. 즉 Project를 "템플릿 + 값"으로 보고 Namespace·RBAC·Quota·NetworkPolicy를 일관 렌더. 단, 트리거는 NVCM의 반응형이 아니라 AIPub의 controller-runtime 재조정 루프를 유지하는 것이 k8s 관례에 맞다.</p>
+
+      <div class="caveat">
+        <div class="label">적용 시 유의</div>
+        NVCM은 <strong>디바이스 config 파일</strong>(텍스트)을 다루므로 "불변 버전+diff"가 자연스럽다. AIPub은 <strong>살아있는 k8s 객체</strong>를 다루므로, 저장소는 "선언 의도의 이력"과 "reconcile 결과 스냅샷"을 저장하는 보조 축으로 두고, 진실의 근원은 여전히 etcd/CR로 유지해야 한다.
+      </div>
+    </section>
+
+    <!-- ───────── 정리 ───────── -->
+    <section class="section" id="takeaway">
+      <h2 class="blue">정리 · 시사점</h2>
+      <ul>
+        <li><strong>NVCM은 오픈소스 네트워크 자동화·구성 관리 플랫폼</strong>(Developer Preview)이며, 역할은 "대규모 데이터센터 네트워크 디바이스의 구성 자동화·버전관리"다.</li>
+        <li><strong>설계의 요체</strong>: SoT(Nautobot) → 이벤트(NATS) → 렌더(Jinja2) → 불변 저장(Config Store) → 승인 워크플로(Temporal), 그리고 MCP로 AI 연동. 각 축이 독립 서비스로 분리되어 있다.</li>
+        <li><strong>AIPub 차용 3선</strong>: ① 불변 렌더 이력 저장소, ② 민감 작업 승인 게이트, ③ MCP 셀프서비스. 셋 다 감사·롤백·안전성·셀프서비스를 강화한다.</li>
+        <li><strong>경계 유지</strong>: 레이어(네트워크 vs k8s 플랫폼)와 트리거 모델(반응형 vs 재조정형)의 차이를 지키면서 "패턴"만 이식하는 것이 안전하다.</li>
+      </ul>
+    </section>
+
+    <!-- ───────── 소스 ───────── -->
+    <section class="section" id="sources">
+      <h2 class="muted">소스</h2>
+      <ul class="source-list">
+        <li><span class="source-quality sq-primary">Repo</span><span class="source-url">github.com/NVIDIA/nv-config-manager — README · AGENTS.md · 디렉터리 트리(src·components·deploy·docs)</span></li>
+        <li><span class="source-quality sq-primary">Docs</span><span class="source-url">docs/overview/architecture.mdx · docs/render/render-service.mdx · docs/config-store/config-store-architecture.mdx</span></li>
+        <li><span class="source-quality sq-primary">Docs</span><span class="source-url">docs/temporal/workflows/* · docs/dhcp · docs/network-ztp · docs/overview/mcp.mdx</span></li>
+      </ul>
+      <div class="caveat" style="margin-top:16px;">
+        <div class="label">신뢰도 노트</div>
+        서비스 구성·디렉터리 구조·기술 스택은 저장소와 공식 문서에서 직접 확인. AIPub 적용안은 두 시스템의 구조적 동형성에 기반한 <strong>제안</strong>이며, 실제 AIPub 코드베이스와의 상세 정합은 별도 검증이 필요하다.
+      </div>
+    </section>
+
+  </main>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  document.querySelectorAll('abbr[data-tooltip]').forEach(function(abbr) {
+    abbr.addEventListener('click', function(e) {
+      e.preventDefault(); e.stopPropagation();
+      showTooltipModal(this);
+    });
+  });
+  document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('tooltip-modal-overlay')) closeTooltipModal();
+  });
+});
+function showTooltipModal(abbr) {
+  var existing = document.querySelector('.tooltip-modal-overlay');
+  if (existing) existing.remove();
+  var overlay = document.createElement('div');
+  overlay.className = 'tooltip-modal-overlay';
+  var modal = document.createElement('div');
+  modal.className = 'tooltip-modal';
+  modal.innerHTML = '<div class="tooltip-modal-title">' + abbr.textContent + '</div>' +
+    '<div class="tooltip-modal-content">' + abbr.getAttribute('data-tooltip') + '</div>' +
+    '<button class="tooltip-modal-close" onclick="closeTooltipModal()">&times;</button>';
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+  setTimeout(function() { overlay.classList.add('active'); }, 10);
+  document.addEventListener('keydown', handleEscKey);
+}
+function closeTooltipModal() {
+  var overlay = document.querySelector('.tooltip-modal-overlay');
+  if (overlay) { overlay.classList.remove('active'); setTimeout(function() { overlay.remove(); }, 200); }
+  document.removeEventListener('keydown', handleEscKey);
+}
+function handleEscKey(e) { if (e.key === 'Escape') closeTooltipModal(); }
+</script>
+
+</body>
+</html>
